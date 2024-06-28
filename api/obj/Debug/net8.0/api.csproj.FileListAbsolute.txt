@@ -112,3 +112,4 @@ D:\work\zeustraining\todo\FINSHARK\uploader\api\bin\Debug\net8.0\MySqlConnector.
 D:\work\zeustraining\todo\FINSHARK\uploader\api\bin\Debug\net8.0\System.Configuration.ConfigurationManager.dll
 D:\work\zeustraining\todo\FINSHARK\uploader\api\bin\Debug\net8.0\System.Security.Cryptography.ProtectedData.dll
 D:\work\zeustraining\todo\FINSHARK\uploader\api\bin\Debug\net8.0\Z.EntityFramework.Extensions.EFCore.dll
+D:\work\zeustraining\todo\FINSHARK\uploader\api\bin\Debug\net8.0\RabbitMQ.Client.dll

@@ -9,18 +9,17 @@ namespace api.Models
 {
     public class User
     {
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public  int Id {get;set;}
-        public required string Name {get;set;}
-        public required string Email {get;set;}
-        public required string Country {get;set;}
-        public required string State {get;set;}
-        public required string City {get;set;}
-        public required string Telephone {get;set;}
-        public required string AddressLine1 {get;set;}
-        public required string AddressLine2 {get;set;}
+        public  string Name {get;set;}
+        public  string Email {get;set;}
+        public  string Country {get;set;}
+        public  string State {get;set;}
+        public  string City {get;set;}
+        public  string Telephone {get;set;}
+        public  string AddressLine1 {get;set;}
+        public  string AddressLine2 {get;set;}
 
-        public required DateTime DateOfBirth {get;set;}
+        public  DateTime DateOfBirth {get;set;}
         public  Salary Salary {get;set;}
     }
 }

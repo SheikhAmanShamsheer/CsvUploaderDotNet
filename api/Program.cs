@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
-
+using api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -30,8 +30,26 @@ builder.Services.AddDbContext<ApplicationDBContext>(options =>{
 builder.Services.AddMySqlDataSource(builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 
+if(args.Length!=0 &&  args[0] == "worker")
+{
+    UploadService obj=new UploadService();
+    Console.WriteLine("Inside worker if ");
+    await obj.uploadData();
+}
+else{
+    var app = builder.Build();
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
 
-var app = builder.Build();
+    // app.UseHttpsRedirection();
+    app.MapControllers();
+    app.Run();
+}
+// var app = builder.Build();
 // app.MapGet("/api/blog/{id}", async ([FromServices] MySqlDataSource db, int id) =>
 // {
 //     var repository = new CRUDRepository(db);
@@ -51,14 +69,14 @@ var app = builder.Build();
 //     return "uploaded";
 // });
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// if (app.Environment.IsDevelopment())
+// {
+//     app.UseSwagger();
+//     app.UseSwaggerUI();
+// }
 
-app.UseHttpsRedirection();
-app.MapControllers();
+// app.UseHttpsRedirection();
+// app.MapControllers();
 
 
-app.Run();
+// app.Run();
