@@ -1,10 +1,12 @@
 using System.Data;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using api.Data;
 using api.Models;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 
 
@@ -12,6 +14,7 @@ namespace api.Controllers
 {
     [Route("api/user")]
     [ApiController]
+    
     public class UserController : ControllerBase
     {
         private readonly
@@ -23,7 +26,7 @@ namespace api.Controllers
 
         private async Task<Salary> GetSalary(int id)
         {
-            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv");
+            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowLoadLocalInfile=true");
             MySqlCommand cmd = new MySqlCommand($"SELECT * FROM salary WHERE userid={id}");
             cmd.CommandType = CommandType.Text;
             cmd.Connection = connect;
@@ -61,7 +64,7 @@ namespace api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetALL()
         {
-            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv");
+            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowLoadLocalInfile=true");
             MySqlCommand cmd = new MySqlCommand($"SELECT * FROM users LIMIT 20");
             MySqlCommand SalaryCmd = new MySqlCommand($"SELECT * FROM salary LIMIT 20");
 
@@ -105,7 +108,7 @@ namespace api.Controllers
         [HttpGet("{start:int}")]
         public async Task<IActionResult> GetPage([FromRoute] int start)
         {
-            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv");
+            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowLoadLocalInfile=true");
             MySqlCommand cmd = new MySqlCommand($"SELECT * FROM users LIMIT 11 OFFSET {start-1}");
             cmd.CommandType = CommandType.Text;
             cmd.Connection = connect;
@@ -145,7 +148,7 @@ namespace api.Controllers
         [HttpGet("id/{id}")]
         public async Task<User> GetById([FromRoute] int id)
         {
-            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv");
+            MySqlConnection connect = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowLoadLocalInfile=true");
             MySqlCommand cmd = new MySqlCommand($"SELECT * FROM users WHERE ID={id}");
             cmd.CommandType = CommandType.Text;
             cmd.Connection = connect;
@@ -190,7 +193,7 @@ namespace api.Controllers
         [HttpPost]
         public async Task<IActionResult> InsertAsync([FromBody] User user)
         {
-            using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowUserVariables=True;UseAffectedRows=False");
+            using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowLoadLocalInfile=true");
             await connection.OpenAsync();
             int count = await GetCount();
             count++;
@@ -203,7 +206,7 @@ namespace api.Controllers
 
         [HttpGet("count")]
         public  async Task<int> GetCount(){
-            using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowUserVariables=True;UseAffectedRows=False");
+            using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;;AllowLoadLocalInfile=true");
             await connection.OpenAsync();
             var connStr = "Server=localhost;User=root;Password=zeus@123;Database=csv;AllowUserVariables=True;UseAffectedRows=False";
             string stmt = $"SELECT COUNT(*) FROM users";
@@ -215,7 +218,6 @@ namespace api.Controllers
                     using (MySqlCommand cmdCount = new MySqlCommand(stmt, thisConnection))
                     {
                         thisConnection.Open();
-                        // Console.Write("ran......");
                         count = Convert.ToInt32(cmdCount.ExecuteScalar());
                     }
                 }
@@ -236,74 +238,43 @@ namespace api.Controllers
             using var RabbitMQconnection = factory.CreateConnection();
             using var channel = RabbitMQconnection.CreateModel();
             // using Send.Models;
-            channel.QueueDeclare(queue: "hello",
+            channel.QueueDeclare(queue: "process_queue",
                     durable: false,
                     exclusive: false,
                     autoDelete: false,
                     arguments: null);
             
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowUserVariables=True;UseAffectedRows=False");
-            await connection.OpenAsync();
-            using var commandCount = connection.CreateCommand();
-            int start = await GetCount();
-            start++;
-            StringBuilder command = new StringBuilder("INSERT INTO Users (ID,Name,EmaiL,Country,State,City,Telephone,AddressLine1,AddressLine2,DateOfBirth) VALUES");
-            StringBuilder SalaryCommand = new StringBuilder("INSERT IGNORE INTO salary (SalaryId,FY_2019_20,FY_2020_21,FY_2021_22,UserId) VALUES");
-            foreach (var file in files)
-            {
-                var result = "";
-                using (var reader = new StreamReader(file.OpenReadStream()))
-                {   
-                        while(reader.Peek() >= 0){
-                            result = await reader.ReadLineAsync();
-                            if(!result.Contains("null") && result.Length > 0){
-                                var a = result?.Split(",");
-                                string add = $" ('{start}','{a[0]}','{a[1]}', '{a[2]}','{a[3]}','{a[4]}','{a[5]}','{a[6]}','{a[7]}','{DateTime.Parse(a[8]).ToString("yyyy-MM-dd")}'),";
-                                string salaryAdd = $" ('{start}','{a[9]}','{a[10]}','{a[11]}','{start}'),";
-                                command.Append(add);
-                                SalaryCommand.Append(salaryAdd);
-                                start++;
-                            }
-                        }   
-                        string cmd = command.ToString();
-                        string salaryCmd = SalaryCommand.ToString();
-                        string  send = cmd+':'+salaryCmd;
-                        // Console.WriteLine(send);
-                        var body = Encoding.UTF8.GetBytes(send);
-                        channel.BasicPublish(exchange: string.Empty,
-                                            routingKey: "hello",
-                                            basicProperties: null,
-                                            body: body);
-                        Console.WriteLine($" [x] Sent message");
-                        // cmd = cmd.Remove(cmd.Length-1);
-                        // cmd += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth);";
-                        // salaryCmd = salaryCmd.Remove(salaryCmd.Length-1);
-                        // salaryCmd += " ON DUPLICATE KEY UPDATE FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
-                    //     Console.WriteLine(cmd);
-                    //     Console.WriteLine(salaryCmd);
-                    //     using (MySqlCommand myCmd = new MySqlCommand(cmd, connection))
-                    //     {
-                    //         Console.WriteLine("User querey started.");
-                    //         myCmd.CommandType = CommandType.Text;
-                    //         myCmd.ExecuteNonQuery();
-                    //         Console.WriteLine("User querey executed.");
-                    //     }
-                    //     using (MySqlCommand myCmd = new MySqlCommand(salaryCmd, connection))
-                    //     {
-                    //         myCmd.CommandType = CommandType.Text;
-                    //         myCmd.ExecuteNonQuery();
-                    //         Console.WriteLine("Salary querey executed.");
-                    //     }
-                    // }catch(Exception e){
-                    //     Console.Write("Error: "+e);
-                    // }
-                    
-                }
+            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+            channel.QueueDeclare(queue: "object_queue",
+                    durable: false,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+            
+            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+
+            foreach (var file in files){
+                // var result = "";
+                using var memoryStream = new MemoryStream();
+                file.CopyTo(memoryStream);
+                var name = file.FileName;
+                Console.WriteLine(name);
+                Log log = new Log{
+                    IsUploaded = true,
+                };
+                var message = JsonConvert.SerializeObject(log);
+                var body = Encoding.UTF8.GetBytes(message);
+                var fileBytes = memoryStream.ToArray();
+                // var jsonText = JsonSerializer.Serialize(log);
+                // var encodedText = Encoding.UTF8.GetBytes(jsonText);
+                // Console.WriteLine(fileBytes);
+                channel.BasicPublish(exchange: string.Empty,
+                                        routingKey: "process_queue",
+                                        body: fileBytes);
+                channel.BasicPublish(exchange: string.Empty,
+                                        routingKey: "object_queue",
+                                        body: body);
             }
-            watch.Stop();
-            var elapsedMs = watch.ElapsedMilliseconds;
-            Console.WriteLine($"Time takes: {elapsedMs/1000}s");
             return Ok("Uploaded");
         }
 

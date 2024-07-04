@@ -30,13 +30,13 @@ builder.Services.AddDbContext<ApplicationDBContext>(options =>{
 builder.Services.AddMySqlDataSource(builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 
-if(args.Length!=0 &&  args[0] == "worker")
-{
-    UploadService obj=new UploadService();
-    Console.WriteLine("Inside worker if ");
-    await obj.uploadData();
-}
-else{
+// if(args.Length!=0 &&  args[0] == "worker")
+// {
+//     UploadService obj=new UploadService();
+//     Console.WriteLine("Inside worker if ");
+//     await obj.uploadData();
+// }
+// else{
     var app = builder.Build();
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
@@ -48,7 +48,7 @@ else{
     // app.UseHttpsRedirection();
     app.MapControllers();
     app.Run();
-}
+// }
 // var app = builder.Build();
 // app.MapGet("/api/blog/{id}", async ([FromServices] MySqlDataSource db, int id) =>
 // {

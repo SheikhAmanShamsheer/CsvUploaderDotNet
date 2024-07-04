@@ -13,7 +13,7 @@ namespace api.Services
 {
     public class UploadService
     {
-        public async Task<bool> uploadData(){
+        public  async Task<bool> uploadData(){
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=csv;AllowUserVariables=True;UseAffectedRows=False");
@@ -23,23 +23,26 @@ namespace api.Services
             using var channel = RabbitMQconnection.CreateModel();
 
             
-            channel.QueueDeclare(queue: "hello",
+            channel.QueueDeclare(queue: "files",
                                 durable: false,
                                 exclusive: false,
                                 autoDelete: false,
                                 arguments: null);
+            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+
 
             Console.WriteLine(" [*] Waiting for messages.");
 
             var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += (model, ea) => {  
+            consumer.Received += async (model, ea) => {  
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 // Console.WriteLine(message);
                 var cmds = message.Split(':');
                 var cmd = cmds[0];
                 var salaryCmd = cmds[1];
-                // Console.Write($"message recived: {cmd}");
+                string name = cmds[2];
+                Console.WriteLine($"message recived: {name}");
                 cmd = cmd.Remove(cmd.Length-1);
                 cmd += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth);";
                 salaryCmd = salaryCmd.Remove(salaryCmd.Length-1);
@@ -50,26 +53,29 @@ namespace api.Services
                 {
                     Console.WriteLine("User querey started.");
                     myCmd.CommandType = CommandType.Text;
-                    myCmd.ExecuteNonQuery();
+                    await myCmd.ExecuteNonQueryAsync();
                     Console.WriteLine("User querey executed.");
                 }
                 using (MySqlCommand myCmd = new MySqlCommand(salaryCmd, connection))
                 {
-                    Console.WriteLine("Salary querey executed.");
+                    Console.WriteLine("Salary querey started.");
                     myCmd.CommandType = CommandType.Text;
-                    myCmd.ExecuteNonQuery();
+                    await myCmd.ExecuteNonQueryAsync();
                     Console.WriteLine("Salary querey executed.");
                 }
-                Console.WriteLine($"Uploaded");
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
+                Console.WriteLine($"Time takes: {elapsedMs/1000}s");
+                channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+
             };
-            channel.BasicConsume(queue: "hello",
+            
+            channel.BasicConsume(queue: "files",
                                 autoAck: true,
                                 consumer: consumer);
             Console.ReadLine();
-            watch.Stop();
-            var elapsedMs = watch.ElapsedMilliseconds;
-            Console.WriteLine($"Time takes: {elapsedMs/1000}s");
             return true;
+            
         }
     }
 }
