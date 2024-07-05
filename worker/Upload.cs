@@ -27,30 +27,42 @@ namespace worker
         public void Start(){
             using var RabbitMQconnection = factory.CreateConnection();
             using var channel = RabbitMQconnection.CreateModel();
-            channel.QueueDeclare(queue: "database_queue",
-                                durable: false,
-                                exclusive: false,
-                                autoDelete: false,
-                                arguments: null);
             channel.QueueDeclare(queue: "database_object_queue",
                                 durable: false,
                                 exclusive: false,
                                 autoDelete: false,
                                 arguments: null);
+            channel.QueueDeclare(queue: "database_queue",
+                                durable: false,
+                                exclusive: false,
+                                autoDelete: false,
+                                arguments: null);
+            
             channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
             Console.WriteLine(" [*] Waiting for messages.");
             var _retryPolicy = Policy
                 .Handle<Exception>()
-                .WaitAndRetryAsync(5, retryAttempt => {
+                .WaitAndRetryAsync(3, retryAttempt => {
                         var timeToWait = TimeSpan.FromSeconds(10);
                         Console.WriteLine($"Waiting {timeToWait.TotalSeconds} seconds");
                         return timeToWait;
                         });
-
+            var consumer2 = new EventingBasicConsumer(channel);
+            consumer2.Received += (model, ea) =>
+            {
+                Console.WriteLine("Object Recived");
+                var fileBytes = ea.Body.ToArray();
+                // Console.WriteLine(fileBytes);
+                var postJson = Encoding.UTF8.GetString(fileBytes);
+                var post = System.Text.Json.JsonSerializer.Deserialize<Log>(postJson);
+                // _savelog.SetLog(post);
+                Console.WriteLine("worker "+post?.NoOfBatchesCreated);
+            };
+            
 
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += async (model, ea) => {  
-                
+                var watch = System.Diagnostics.Stopwatch.StartNew();
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 // var cmds = message.Split(':');
@@ -63,58 +75,60 @@ namespace worker
                 // salaryCmd = salaryCmd.Remove(salaryCmd.Length-1);
                 // salaryCmd += " ON DUPLICATE KEY UPDATE FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
                 // Console.WriteLine(cmd);
-                using(var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=uploader;AllowLoadLocalInfile=true;Allow User Variables=true;Connection TImeout=150;MaxPoolSize=20")){
-                        var watch = System.Diagnostics.Stopwatch.StartNew();
+                await _retryPolicy.ExecuteAsync(async () => {
+                    using(var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=uploader;AllowLoadLocalInfile=true;Allow User Variables=true;Connection TImeout=150;MaxPoolSize=20")){
                         connection.Open();
-                        try{
                             using (MySqlCommand myCmd = new MySqlCommand(cmd, connection)){
                             // Console.WriteLine("User querey started.");
-                            myCmd.CommandType = CommandType.Text;
-                            try{
-                                await _retryPolicy.ExecuteAsync(async () => {
-                                    await myCmd.ExecuteNonQueryAsync();
-                                });
-                            }catch(Exception e){
-                                Console.WriteLine(e.Message);
+                                myCmd.CommandType = CommandType.Text;
+                                try{
+                                    
+                                        await myCmd.ExecuteNonQueryAsync();
+                                    
+                                    // channel.BasicAck(ea.DeliveryTag,false);
+                                }catch(Exception e){
+                                    Console.WriteLine(e.Message);
+                                    // throw;
+                                }
                             }
-                            // Console.WriteLine("User querey executed.");
-                            // Console.WriteLine("Salary querey started.");
-                            // myCmd.CommandText = salaryCmd;
-                            // myCmd.CommandType = CommandType.Text;
-                            // await myCmd.ExecuteNonQueryAsync();
-                            // Console.WriteLine("Salary querey executed.");
-                        }
-                        }catch(Exception ex){
-                            Console.WriteLine(ex);
-                        }
-                        
                         connection.Close();
-                        watch.Stop();
-                        var elapsedMs = watch.ElapsedMilliseconds;
-                        Console.WriteLine($"Time takes: {elapsedMs/1000}s");
-                }
+                    }
+                });  
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
+                Console.WriteLine($"Time takes: {elapsedMs/1000}s");
                 
             };
-            
+            // Console.WriteLine("Data Uploaded Successfully");
+            channel.BasicConsume(queue: "database_object_queue",
+                    autoAck: true,
+                    consumer: consumer2);
+                    
             channel.BasicConsume(queue: "database_queue",
                                 autoAck: true,
                                 consumer: consumer);
 
-            var consumer2 = new EventingBasicConsumer(channel);
-            consumer2.Received += async (model, ea) =>
-            {
-                Console.WriteLine("Object Recived");
-                var fileBytes = ea.Body.ToArray();
-                // Console.WriteLine(fileBytes);
-                var postJson = Encoding.UTF8.GetString(fileBytes);
-                var post = System.Text.Json.JsonSerializer.Deserialize<Log>(postJson);
-                _savelog.SetLog(post);
-                Console.WriteLine("worker "+post?.IsReceivedByUploader);
-            };
-            channel.BasicConsume(queue: "database_object_queue",
-                    autoAck: true,
-                    consumer: consumer2);
             Console.ReadLine();
+        }
+        private void RepublishMessage(IModel channel, string queueName, byte[] body){
+            try{
+                channel.BasicPublish(exchange: string.Empty,
+                            routingKey: queueName,
+                            body: body);
+            }catch(Exception e){
+                Console.WriteLine(e.Message);
             }
+            
+        }
     }
 }
+
+// try{
+                                    //     Console.WriteLine("Requeued");
+                                    //     channel.BasicPublish(exchange: string.Empty,
+                                    //                 routingKey: "database_queue",
+                                    //                 body: body);
+                                    // }catch(Exception ex){
+                                    //     Console.WriteLine(ex.Message);
+                                    // }
+                                    // channel.BasicAck(ea.DeliveryTag, false);

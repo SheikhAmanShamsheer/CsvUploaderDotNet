@@ -9,8 +9,9 @@ namespace api.Models
     {
         public Boolean IsUploaded {get;set;}
         public Boolean IsReceivedByProcessor {get;set;}
-        public int NoOfBatchesCreated{get;set;}
-        public Boolean IsReceivedByUploader{get;set;}
-        public Boolean IsUploadedToDatabase{get;set;}
+        public int NoOfBatchesCreated {get;set;}
+        public List<BatchUpload> BatchUploadedOrNot {get;set;}
+        public Boolean IsReceivedByUploader {get;set;}
+        public Boolean IsUploadedToDatabase {get;set;}
     }
 }

@@ -22,30 +22,6 @@ namespace processing
         }
 
 
-        public  async Task<int> GetCount(){
-        using var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=uploader;AllowLoadLocalInfile=true");
-        await connection.OpenAsync();
-        var connStr = "Server=localhost;User=root;Password=zeus@123;Database=csv;AllowUserVariables=True;UseAffectedRows=False";
-        string stmt = $"SELECT COUNT(*) FROM users";
-        var count = 0;
-        try
-        {
-            using (MySqlConnection thisConnection = new MySqlConnection(connStr))
-            {
-                using (MySqlCommand cmdCount = new MySqlCommand(stmt, thisConnection))
-                {
-                    thisConnection.Open();
-                    count = Convert.ToInt32(cmdCount.ExecuteScalar());
-                }
-            }
-            return count;
-        }
-        catch (Exception ex)
-        {
-            Console.Write(ex);
-            return 0;
-        }
-    }
     public void Start(){
         var connection = factory.CreateConnection();
         var channel = connection.CreateModel();
@@ -67,7 +43,7 @@ namespace processing
         Console.WriteLine(" [*] Waiting for file to Come");
 
         var consumer2 = new EventingBasicConsumer(channel);
-        consumer2.Received += async (model, ea) =>
+        consumer2.Received +=  (model, ea) =>
         {
             Console.WriteLine("Object Recived");
             var fileBytes = ea.Body.ToArray();
