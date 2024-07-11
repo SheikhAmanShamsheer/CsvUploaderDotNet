@@ -17,12 +17,6 @@ namespace api.Controllers
     
     public class UserController : ControllerBase
     {
-        private readonly
-        ApplicationDBContext _context;
-        public UserController(ApplicationDBContext context)
-        {
-            _context = context;
-        }
 
         private async Task<Salary> GetSalary(int id)
         {
@@ -231,7 +225,7 @@ namespace api.Controllers
         }
 
         [HttpPost("upload-file")]
-        public  async Task<IActionResult> OnPostUploadAsync(List<IFormFile> files)
+        public  IActionResult OnPostUploadAsync(List<IFormFile> files)
         {
 
             var factory = new ConnectionFactory { HostName = "localhost" };
@@ -245,37 +239,42 @@ namespace api.Controllers
                     arguments: null);
             
             channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-            channel.QueueDeclare(queue: "object_queue",
-                    durable: false,
-                    exclusive: false,
-                    autoDelete: false,
-                    arguments: null);
-            
-            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-
+            var NotUploaded = 0;
+            var totalFiles = 0;
             foreach (var file in files){
-                // var result = "";
-                using var memoryStream = new MemoryStream();
-                file.CopyTo(memoryStream);
-                var name = file.FileName;
-                Console.WriteLine(name);
-                Log log = new Log{
-                    IsUploaded = true,
-                };
-                var message = JsonConvert.SerializeObject(log);
-                var body = Encoding.UTF8.GetBytes(message);
-                var fileBytes = memoryStream.ToArray();
-                // var jsonText = JsonSerializer.Serialize(log);
-                // var encodedText = Encoding.UTF8.GetBytes(jsonText);
-                // Console.WriteLine(fileBytes);
-                channel.BasicPublish(exchange: string.Empty,
-                                        routingKey: "process_queue",
-                                        body: fileBytes);
-                channel.BasicPublish(exchange: string.Empty,
-                                        routingKey: "object_queue",
-                                        body: body);
+                totalFiles++;
+                if(file.ContentType == "text/csv"){
+                    using var memoryStream = new MemoryStream();
+                    file.CopyTo(memoryStream);
+                    var name = file.FileName;
+                    Console.WriteLine(name);
+                    Log l = new Log{
+                        fileName = file.FileName,
+                        fileId = Guid.NewGuid().ToString(),
+                        status = "Uploading"
+                    };
+                    
+                    var fileBytes = memoryStream.ToArray();
+                    SendModel sm = new SendModel{
+                        fileBytes = fileBytes,
+                        log = l,
+                    };
+
+                    var message = JsonConvert.SerializeObject(sm);
+                    var body = Encoding.UTF8.GetBytes(message);
+                    channel.BasicPublish(exchange: string.Empty,
+                                            routingKey: "process_queue",
+                                            body: body);
+                }else{
+                    NotUploaded++;
+                }
+                
+
             }
-            return Ok("Uploaded");
+            if(NotUploaded > 0){
+                return Ok($"{totalFiles-NotUploaded} Uploaded Out of {totalFiles}");
+            }
+            return Ok(files);
         }
 
         [HttpPut("update")]

@@ -1,14 +1,7 @@
-using System.Security.Cryptography.X509Certificates;
-using api.Controllers;
+
 using api.Data;
-using api.Mappers;
-using api.Models;
-// using api.Repository;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
-using api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
