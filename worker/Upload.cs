@@ -131,39 +131,47 @@ namespace worker
 
             // var _policyWrap = Policy.WrapAsync( fallbackPolicy,_retryPolicy);
             Log log = new();
-            var i =0;
+            var batch =0;
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += async (model, ea) => {  
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var body = ea.Body.ToArray();
                 var m = Encoding.UTF8.GetString(body);
                 var cmd = "";
-                
-                SendModel sm = System.Text.Json.JsonSerializer.Deserialize<SendModel>(m)!;
+                dynamic? sm = System.Text.Json.JsonSerializer.Deserialize<SendModel>(m)!;
                 cmd = Encoding.UTF8.GetString(sm.fileBytes);
                 log = sm.log;
-                // cmd = cmd.Remove(cmd.Length-1);
-                // cmd += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
-                sm.log.BatchData[sm.log.BatchData.Count-1].command = sm.log.BatchData[sm.log.BatchData.Count-1].command.Remove(sm.log.BatchData[sm.log.BatchData.Count-1].command.Length-1);
-                sm.log.BatchData[sm.log.BatchData.Count-1].command += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
+                // Console.WriteLine(Encoding.UTF8.GetString(sm.bacthNo));
+                // int batch = Convert.ToInt32(Encoding.UTF8.GetString(sm.bacthNo));
+                // var b = sm.bacthNo;
+                // // Console.WriteLine(b);
+                
+
+                // int batch = BitConverter.ToInt32(b,0);
+                cmd = cmd.Remove(cmd.Length-1);
+                cmd += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
+                // sm.log.BatchData[sm.log.BatchData.Count-1].command = sm.log.BatchData[sm.log.BatchData.Count-1].command.Remove(sm.log.BatchData[sm.log.BatchData.Count-1].command.Length-1);
+                // sm.log.BatchData[sm.log.BatchData.Count-1].command += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
                 var contextData = new Context();
                 contextData["CurrentCommand"] = cmd;
                 await _retryPolicy.ExecuteAsync(async () => {
                     using(var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=uploader;AllowLoadLocalInfile=true;Allow User Variables=true;Connection TImeout=150;MaxPoolSize=20")){
                         connection.Open();
-                            using (MySqlCommand myCmd = new MySqlCommand(sm.log.BatchData[sm.log.BatchData.Count-1].command, connection)){
+                            using (MySqlCommand myCmd = new MySqlCommand(cmd, connection)){
                                 myCmd.CommandType = CommandType.Text;
                                 int executedOrNot = await myCmd.ExecuteNonQueryAsync();
-                                Console.WriteLine($"Batch {i}: {executedOrNot}");
                                 try{
                                     if(executedOrNot > 0){
                                         BatchUpload b = new BatchUpload{
                                             isUploaded = true,
                                         };
-                                        var log = await _logService.GetLogByBatchNumberAsync(sm.log.BatchData[sm.log.BatchData.Count-1].BatchNumber);
-                                        Console.WriteLine(log.fileId);
-                                        await _logService.UpdateBatchUploadAsync(log.fileId,b,sm.log.BatchData[sm.log.BatchData.Count-1].BatchNumber);
+                                        // var log = await _logService.GetLogByBatchNumberAsync(sm.log.BatchData[sm.log.BatchData.Count-1].BatchNumber);
+                                        // Console.WriteLine(log.fileId);
+                                        // await _logService.UpdateBatchUploadAsync(log.fileId,b,sm.log.BatchData[sm.log.BatchData.Count-1].BatchNumber);
                                         // logData(b,log,exhaustedCommands);
+                                        Console.WriteLine(batch);
+                                        log.BatchData[batch].isUploaded = true;
+                                        logData(log);
                                     }
                                 }catch(Exception e){
                                     Console.WriteLine(e.Message);
@@ -172,6 +180,7 @@ namespace worker
                             }
                         connection.Close();
                     }
+                    batch++;
                 });
                 
                 watch.Stop();
@@ -188,24 +197,20 @@ namespace worker
             Console.ReadLine();
         }
 
-        private  async void logData(BatchUpload b,Log log,List<string> exhaustedCommands)
+        private  async void logData(Log log)
         {
             // Console.WriteLine("Data Logging Started");
             Log? f = _logService.GetAsync(log.fileId);
             if(f != null){
                 // Console.WriteLine("Inside if");
-                log.BatchData.Add(b);
                 log.NoOfBatchesCreated = log.BatchData.Count;
-                if(exhaustedCommands.Count > 0) log.NotUploaded = exhaustedCommands;
                 if(log.status == "Processed") log.status = "Uploading...";
-                if(log.BatchData.Count == log.totalNumberOfBatchesCreated) log.status = "Uploaded";
+                if(log.BatchData[log.BatchData.Count-1].isUploaded == true) log.status = "Uploaded";
                 try{
                     await _logService.UpdateAsync(log.fileId,log);
                 }catch(Exception e){
                     Console.WriteLine(e.Message);
                 }
-                
-                
             }
             Console.WriteLine("Data Logged");
         }

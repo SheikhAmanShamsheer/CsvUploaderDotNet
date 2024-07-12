@@ -7,7 +7,10 @@ namespace api.Models
 {
     public class SendModel
     {
-        public byte[] fileBytes {get;set;}
+        public byte[] bacthNo;
+
+        public byte[]? fileBytes {get;set;}
         public Log log {get;set;}
+
     }
 }

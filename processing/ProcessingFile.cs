@@ -81,7 +81,7 @@ namespace processing
         StringBuilder command = new StringBuilder("INSERT INTO Users (Name,EmaiL,Country,State,City,Telephone,AddressLine1,AddressLine2,DateOfBirth,FY_2019_20,FY_2020_21,FY_2021_22) VALUES");
         string startCmd = "INSERT INTO Users (Name,EmaiL,Country,State,City,Telephone,AddressLine1,AddressLine2,DateOfBirth,FY_2019_20,FY_2020_21,FY_2021_22) VALUES";
 
-        const int batchSize = 1000;
+        const int batchSize = 10000;
         var added = 0;
         var batches = 0;
         while(reader.Peek() >= 0){
@@ -112,7 +112,6 @@ namespace processing
                 log.BatchData.Add(new BatchUpload{
                     isUploaded = false,
                     BatchNumber = batches,
-                    command = cmd
                 });
                 // if(cmd != startCmd){
                 if(reader.Peek() <= 0){
@@ -122,7 +121,7 @@ namespace processing
                     _logService.UpdateAsync(log.fileId,log);
                     Console.WriteLine("Data Processing Log Updated");
                 }
-                DatabaseSend(cmd,log);
+                DatabaseSend(cmd,log,batches);
                 // }else{
                 //     Console.WriteLine("Nothing To send");
                 // }
@@ -148,7 +147,7 @@ namespace processing
                             body: body);
         
     }
-    private void DatabaseSend(string send,Log log){
+    private void DatabaseSend(string send,Log log,int batches){
         // Console.WriteLine("data send");
         var connection = factory.CreateConnection();
         var channel = connection.CreateModel();
@@ -158,9 +157,20 @@ namespace processing
             autoDelete: false,
             arguments: null);
         var body = Encoding.UTF8.GetBytes(send);
+        // string n = Convert.ToBase64String(BitConverter.GetBytes(batches));
+        // var number  = Encoding.UTF8.GetBytes(n);
+        Console.WriteLine(batches);
+        byte[] number = BitConverter.GetBytes(batches);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(number);
+        }
+
+        // var number = Encoding.UTF8.GetBytes(Convert.ToString(bacthes));
         SendModel sdm = new SendModel{
             fileBytes = body,
-            log = log
+            log = log,
+            bacthNo = number
         };
         var message = JsonConvert.SerializeObject(sdm);
         var obj = Encoding.UTF8.GetBytes(message);
