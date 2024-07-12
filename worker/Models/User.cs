@@ -22,11 +22,3 @@ namespace worker.Models
         public Salary Salary {get;set;}
     }
 }
-
-
-// "Logging": {
-    // "LogLevel": {
-    //   "Default": "Information",
-    //   "Microsoft.AspNetCore": "Warning"
-    // }
-//   },

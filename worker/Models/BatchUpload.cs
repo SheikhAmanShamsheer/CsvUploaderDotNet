@@ -9,5 +9,6 @@ namespace api.Models
     {
         public Boolean isUploaded {get;set;}
         public int BatchNumber {get;set;}
+        public string? command {get;set;}
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
+using worker.Service;
 
 
 namespace api.Controllers
@@ -17,6 +18,13 @@ namespace api.Controllers
     
     public class UserController : ControllerBase
     {
+        private readonly LogService _logservice;
+        private readonly ILogger<LogService> _logger;
+        public UserController(LogService logservice, ILogger<LogService> logger)
+        {
+            _logservice = logservice;
+            _logger = logger;
+        }
 
         private async Task<Salary> GetSalary(int id)
         {
@@ -253,7 +261,9 @@ namespace api.Controllers
                         fileId = Guid.NewGuid().ToString(),
                         status = "Uploading"
                     };
-                    
+                    _logservice.CreateAsync(l);
+                    // Console.WriteLine("Log Created");
+                    _logger.LogInformation("Log Created");
                     var fileBytes = memoryStream.ToArray();
                     SendModel sm = new SendModel{
                         fileBytes = fileBytes,

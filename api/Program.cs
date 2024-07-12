@@ -1,7 +1,10 @@
 
+using api;
 using api.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using MySqlConnector;
+using worker.Service;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -9,7 +12,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<LogDatabaseSetting>();
+builder.Services.Configure<LogDatabaseSetting>(builder.Configuration.GetSection("LogDatabaseSettings"));
 
+builder.Services.AddSingleton<LogDatabaseSetting>(sp =>
+    sp.GetRequiredService<IOptions<LogDatabaseSetting>>().Value);
+builder.Services.AddSingleton<LogService>();
+builder.Logging.AddLog4Net("logs/log4net.config");
 builder.Services.AddControllers().AddNewtonsoftJson(options =>{
     options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
 });
@@ -20,6 +29,7 @@ builder.Services.AddDbContext<ApplicationDBContext>(options =>{
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 
 });
+
 builder.Services.AddMySqlDataSource(builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 
@@ -30,17 +40,17 @@ builder.Services.AddMySqlDataSource(builder.Configuration.GetConnectionString("D
 //     await obj.uploadData();
 // }
 // else{
-    var app = builder.Build();
-    // Configure the HTTP request pipeline.
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
+var app = builder.Build();
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
     // app.UseHttpsRedirection();
-    app.MapControllers();
-    app.Run();
+app.MapControllers();
+app.Run();
 // }
 // var app = builder.Build();
 // app.MapGet("/api/blog/{id}", async ([FromServices] MySqlDataSource db, int id) =>

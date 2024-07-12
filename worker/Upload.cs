@@ -16,6 +16,7 @@ using api;
 using worker.Service;
 using Microsoft.AspNetCore.Mvc;
 using System.Numerics;
+using System.IO.Compression;
 
 namespace worker
 {
@@ -32,7 +33,68 @@ namespace worker
             _logService = logService ?? throw new ArgumentNullException(nameof(logService));;
         }
 
-        public async void Start(){
+        public static string CompressString(string text)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(text);
+            var memoryStream = new MemoryStream();
+            using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true))
+            {
+                gZipStream.Write(buffer, 0, buffer.Length);
+            }
+
+            memoryStream.Position = 0;
+
+            var compressedData = new byte[memoryStream.Length];
+            memoryStream.Read(compressedData, 0, compressedData.Length);
+
+            var gZipBuffer = new byte[compressedData.Length + 4];
+            Buffer.BlockCopy(compressedData, 0, gZipBuffer, 4, compressedData.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(buffer.Length), 0, gZipBuffer, 0, 4);
+            return Convert.ToBase64String(gZipBuffer);
+        }
+        // public static string DecompressString(string compressedText)
+        // {
+        //     // string converted = compressedText.Replace('-', '+');
+        //     // converted = converted.Replace('_', '/');
+        //     byte[] gZipBuffer = Encoding.UTF8.GetBytes(compressedText);;
+        //     using (var memoryStream = new MemoryStream())
+        //     {
+        //         int dataLength = BitConverter.ToInt32(gZipBuffer, 0);
+        //         memoryStream.Write(gZipBuffer, 4, gZipBuffer.Length - 4);
+
+        //         var buffer = new byte[dataLength];
+
+        //         memoryStream.Position = 0;
+        //         using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+        //         {
+        //             gZipStream.Read(buffer, 0, buffer.Length);
+        //         }
+
+        //         return Encoding.UTF8.GetString(buffer);
+        //     }
+        // }
+       public static string DecompressString(string compressedText)
+{
+    byte[] gZipBuffer = Convert.FromBase64String(compressedText);
+
+    using (var memoryStream = new MemoryStream(gZipBuffer))
+    {
+        // Read the first 4 bytes to get the original buffer length
+        var bufferLengthBytes = new byte[4];
+        memoryStream.Read(bufferLengthBytes, 0, 4);
+        int bufferLength = BitConverter.ToInt32(bufferLengthBytes, 0);
+
+        using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+        {
+            byte[] buffer = new byte[bufferLength];
+            gZipStream.Read(buffer, 0, buffer.Length);
+
+            return Encoding.UTF8.GetString(buffer);
+        }
+    }
+}
+
+        public  void Start(){
             using var RabbitMQconnection = factory.CreateConnection();
             using var channel = RabbitMQconnection.CreateModel();
             channel.QueueDeclare(queue: "database_queue",
@@ -42,16 +104,10 @@ namespace worker
                                 arguments: null);
             
             channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-            Console.WriteLine(" [*] Waiting for messages.");
-            // var _retryPolicy = Policy
-            //     .Handle<Exception>()
-            //     .WaitAndRetryAsync(8, retryAttempt => {
-            //             var timeToWait = TimeSpan.FromSeconds(6+1);
-            //             Console.WriteLine($"Waiting {timeToWait.TotalSeconds} seconds");
-            //             return timeToWait;
-            //             });
-            List<String>NotUploadedBatches = new List<string>();
+            // Console.WriteLine(" [*] Waiting for messages.");
+
             List<BatchUpload>Batches = new List<BatchUpload>();
+            List<string>exhaustedCommands = new List<string>();
 
             var _retryPolicy = Policy
                 .Handle<Exception>()
@@ -60,71 +116,64 @@ namespace worker
                         Console.WriteLine($"Waiting {timeToWait.TotalSeconds} seconds");
                         return timeToWait;
                         });
-            var fallbackPolicy = Policy
-            .Handle<Exception>()
-            .FallbackAsync(async (context,ct) =>
-            {
-                if(context.ContainsKey("FallbackData")){
-                    string fallbackData= context["FallbackData"] as string;
-                    NotUploadedBatches.Add(fallbackData);
-                }
-            },async (exception, context) =>
-            {
-                Console.WriteLine($"Exception for fallback: {exception.Message}");
-            });
+            // var fallbackPolicy = Policy
+            // .Handle<Exception>()
+            // .FallbackAsync(async (context, ct) => {
+            //     if (context.ContainsKey("LastCommand"))
+            //     {
+            //         string fallbackData = context["LastCommand"] as string;
+            //         exhaustedCommands.Add(fallbackData);
+            //         // Console.WriteLine($"Added to exhausted commands: {fallbackData}");
+            //     }
+            // }, async (exception, context) => {
+            //     // Console.WriteLine($"Exception for fallback: {exception.Message}");
+            // });
 
-            var _policyWrap = Policy.WrapAsync(fallbackPolicy, _retryPolicy);
+            // var _policyWrap = Policy.WrapAsync( fallbackPolicy,_retryPolicy);
             Log log = new();
-            // var tcs = new TaskCompletionSource<Log>();
             var i =0;
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += async (model, ea) => {  
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var body = ea.Body.ToArray();
-                // Console.WriteLine(body);
                 var m = Encoding.UTF8.GetString(body);
                 var cmd = "";
-                int totalNumberOfBatchesCreated = 0;
-                // try{
                 
                 SendModel sm = System.Text.Json.JsonSerializer.Deserialize<SendModel>(m)!;
                 cmd = Encoding.UTF8.GetString(sm.fileBytes);
-                try{
-                    var s = cmd.Split("|");
-                    totalNumberOfBatchesCreated = Convert.ToInt32(s[1]);
-                    Console.WriteLine($"All batches received {totalNumberOfBatchesCreated}");
-                    cmd = s[0];
-                }catch{
-
-                }
                 log = sm.log;
-                // }catch(Exception e){
-                //     cmd = m;
-                // }
-                cmd = cmd.Remove(cmd.Length-1);
-                cmd += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
+                // cmd = cmd.Remove(cmd.Length-1);
+                // cmd += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
+                sm.log.BatchData[sm.log.BatchData.Count-1].command = sm.log.BatchData[sm.log.BatchData.Count-1].command.Remove(sm.log.BatchData[sm.log.BatchData.Count-1].command.Length-1);
+                sm.log.BatchData[sm.log.BatchData.Count-1].command += " ON DUPLICATE KEY UPDATE NAME=VALUES(NAME),COUNTRY=VALUES(COUNTRY),STATE=VALUES(STATE),CITY=VALUES(CITY),TELEPHONE=VALUES(TELEPHONE),AddressLine1=VALUES(AddressLine1),AddressLine2=VALUES(AddressLine2),DateOfBirth=VALUES(DateOfBirth),FY_2019_20=VALUES(FY_2019_20),FY_2020_21=VALUES(FY_2020_21),FY_2021_22=VALUES(FY_2021_22);";
                 var contextData = new Context();
-                // var cancellationToken = new CancellationTokenSource();
-                await _policyWrap.ExecuteAsync(async (context) => {
-                    
+                contextData["CurrentCommand"] = cmd;
+                await _retryPolicy.ExecuteAsync(async () => {
                     using(var connection = new MySqlConnection("Server=localhost;User=root;Password=zeus@123;Database=uploader;AllowLoadLocalInfile=true;Allow User Variables=true;Connection TImeout=150;MaxPoolSize=20")){
                         connection.Open();
-                        // using var transaction = await connection.BeginTransactionAsync();
-                            using (MySqlCommand myCmd = new MySqlCommand(cmd, connection)){
+                            using (MySqlCommand myCmd = new MySqlCommand(sm.log.BatchData[sm.log.BatchData.Count-1].command, connection)){
                                 myCmd.CommandType = CommandType.Text;
                                 int executedOrNot = await myCmd.ExecuteNonQueryAsync();
-                                if(executedOrNot > 0){
-                                    Batches.Add(new BatchUpload{
-                                        isUploaded = true,
-                                        BatchNumber = i++
-                                    });
+                                Console.WriteLine($"Batch {i}: {executedOrNot}");
+                                try{
+                                    if(executedOrNot > 0){
+                                        BatchUpload b = new BatchUpload{
+                                            isUploaded = true,
+                                        };
+                                        var log = await _logService.GetLogByBatchNumberAsync(sm.log.BatchData[sm.log.BatchData.Count-1].BatchNumber);
+                                        Console.WriteLine(log.fileId);
+                                        await _logService.UpdateBatchUploadAsync(log.fileId,b,sm.log.BatchData[sm.log.BatchData.Count-1].BatchNumber);
+                                        // logData(b,log,exhaustedCommands);
+                                    }
+                                }catch(Exception e){
+                                    Console.WriteLine(e.Message);
                                 }
+                                
                             }
                         connection.Close();
                     }
-                },contextData);
-                // tcs.SetResult(log);
-                logData(log,Batches,NotUploadedBatches,totalNumberOfBatchesCreated);
+                });
+                
                 watch.Stop();
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.WriteLine($"Time takes: {elapsedMs/1000}s");
@@ -139,70 +188,59 @@ namespace worker
             Console.ReadLine();
         }
 
-        private async void logData(Log log,List<BatchUpload>batches,List<String>NotUploadedBatches, int totalNumberOfBatchesCreated)
+        private  async void logData(BatchUpload b,Log log,List<string> exhaustedCommands)
         {
-            Console.WriteLine("Data Logging Started");
-            Log? f = await _logService.GetAsync(log.fileId);
-            if(f == null){
-                Console.WriteLine("Inside if");
-                log.NoOfBatchesCreated = 1;
+            // Console.WriteLine("Data Logging Started");
+            Log? f = _logService.GetAsync(log.fileId);
+            if(f != null){
+                // Console.WriteLine("Inside if");
+                log.BatchData.Add(b);
+                log.NoOfBatchesCreated = log.BatchData.Count;
+                if(exhaustedCommands.Count > 0) log.NotUploaded = exhaustedCommands;
+                if(log.status == "Processed") log.status = "Uploading...";
+                if(log.BatchData.Count == log.totalNumberOfBatchesCreated) log.status = "Uploaded";
+                try{
+                    await _logService.UpdateAsync(log.fileId,log);
+                }catch(Exception e){
+                    Console.WriteLine(e.Message);
+                }
                 
-                // log.BatchData.Add(new BatchUpload{
-                //     isUploaded = true,
-                //     BatchNumber = 1
-                // });
-                log.BatchData = batches;
-                if(totalNumberOfBatchesCreated== log.NoOfBatchesCreated) {
-                    Console.WriteLine("Inside");
-                    log.status = "Uploaded";
-                }
-                log.NotUploaded = NotUploadedBatches;
-                await _logService.CreateAsync(log);
-            }else{
-                Console.WriteLine("Inside else");
-                // Console.WriteLine(log.NoOfBatchesCreated);
-                // f.BatchData.Add(new BatchUpload{
-                //     isUploaded = true,
-                //     BatchNumber = f.BatchData.Count+1
-                // });
-                Log temp = new Log{
-                    fileId = f.fileId,
-                    fileName = f.fileName,
-                    status = f.status,
-                    totalNumberOfBatchesCreated = f.totalNumberOfBatchesCreated,
-                    NoOfBatchesCreated = f.BatchData.Count,
-                    BatchData = batches
-                };
-                // Console.WriteLine(temp.totalNumberOfBatchesCreated);
-                // Console.WriteLine(temp.NoOfBatchesCreated);
-                if(temp.totalNumberOfBatchesCreated == temp.NoOfBatchesCreated) {
-                    Console.WriteLine("Inside");
-                    temp.status = "Uploaded";
-                }
-                temp.NotUploaded = NotUploadedBatches;
-                await _logService.UpdateAsync(log.fileName,temp);
+                
             }
             Console.WriteLine("Data Logged");
         }
-        private void RepublishMessage(IModel channel, string queueName, byte[] body){
-            try{
-                channel.BasicPublish(exchange: string.Empty,
-                            routingKey: queueName,
-                            body: body);
-            }catch(Exception e){
-                Console.WriteLine(e.Message);
-            }
-            
-        }
+        
     }
 }
 
-// try{
-                                    //     Console.WriteLine("Requeued");
-                                    //     channel.BasicPublish(exchange: string.Empty,
-                                    //                 routingKey: "database_queue",
-                                    //                 body: body);
-                                    // }catch(Exception ex){
-                                    //     Console.WriteLine(ex.Message);
-                                    // }
-                                    // channel.BasicAck(ea.DeliveryTag, false);
+
+// if(f == null){
+                // Console.WriteLine("Inside if");
+//                 log.NoOfBatchesCreated = batches.Count;
+
+//                 log.BatchData = batches;
+//                 if(totalNumberOfBatchesCreated== log.NoOfBatchesCreated) {
+                    // Console.WriteLine("Inside");
+//                     log.status = "Uploaded";
+//                 }
+//                 // log.NotUploaded = NotUploadedBatches;
+//                 _logService.CreateAsync(log);
+//             }else{
+                // Console.WriteLine("Inside else");
+
+//                 Log temp = new Log{
+//                     fileId = f.fileId,
+//                     fileName = f.fileName,
+//                     status = f.status,
+//                     totalNumberOfBatchesCreated = f.totalNumberOfBatchesCreated,
+//                     NoOfBatchesCreated = batches.Count,
+//                     BatchData = batches
+//                 };
+
+//                 if(temp.totalNumberOfBatchesCreated == temp.NoOfBatchesCreated) {
+                    // Console.WriteLine("Inside");
+//                     temp.status = "Uploaded";
+//                 }
+//                 // temp.NotUploaded = NotUploadedBatches;
+//                 _logService.UpdateAsync(log.fileName,temp);
+//             }

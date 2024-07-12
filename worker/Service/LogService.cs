@@ -21,29 +21,77 @@ namespace worker.Service
             bookStoreDatabaseSettings.LogCollectionName);
     }
 
-    public async Task<List<Log>> GetAsync() =>
-        await _logCollection.Find(_ => true).ToListAsync();
+    public  List<Log> GetAsync() =>
+        _logCollection.Find(_ => true).ToList();
 
-    public async Task<Log?> GetAsync(string id) =>
-        await _logCollection.Find(x => x.fileId == id).FirstOrDefaultAsync();
+    public Log? GetAsync(string id) =>
+        _logCollection.Find(x => x.fileId == id).FirstOrDefault();
 
-    public async Task<Log?> FindByFileName(string fileName) =>
-        await _logCollection.Find(x => x.fileName == fileName).FirstOrDefaultAsync();
+    public Log? FindByFileName(string fileName) =>
+        _logCollection.Find(x => x.fileName == fileName).FirstOrDefault();
 
-    public async Task CreateAsync(Log newBook) =>
-        await _logCollection.InsertOneAsync(newBook);
+    public  void CreateAsync(Log newBook) =>
+        _logCollection.InsertOne(newBook);
 
-    public async Task UpdateAsync(string id, Log updatedBook) {
-        var filter = Builders<Log>.Filter
-                    .Eq(x => x.fileName, id);
-        var update = Builders<Log>.Update
-        .Set(x => x.status, updatedBook.status)
-        .Set(x => x.NoOfBatchesCreated, updatedBook.NoOfBatchesCreated)
-        .Set(x => x.BatchData, updatedBook.BatchData);
-        await _logCollection.UpdateOneAsync(filter, update);
+    public async Task<Log> GetLogByBatchNumberAsync(int batchNumber)
+    {
+        var filter = Builders<Log>.Filter.ElemMatch(log => log.BatchData, batch => batch.BatchNumber == batchNumber);
+        return await _logCollection.Find(filter).FirstOrDefaultAsync();
+    }
+    public async Task UpdateAsync(string id, Log updatedLog) {
+        // var filter = Builders<Log>.Filter
+        //             .Eq(x => x.fileName, id);
+        // var update = Builders<Log>.Update
+        // .Set(x => x.status, updatedBook.status)
+        // .Set(x => x.NoOfBatchesCreated, updatedBook.NoOfBatchesCreated)
+        // .Set(x => x.BatchData, updatedBook.BatchData);
+        // _logCollection.UpdateOne(filter, update);
+        var filter = Builders<Log>.Filter.Eq(log => log.fileId, id);
+            await _logCollection.ReplaceOneAsync(filter, updatedLog);
+    }
+    // public async Task UpdateBatchUploadAsync(string logId, BatchUpload updatedBatch, int batchNumber)
+    // {
+    //     var filter = Builders<Log>.Filter.And(
+    //         Builders<Log>.Filter.Eq(log => log.fileId, logId),
+    //         Builders<Log>.Filter.ElemMatch(log => log.BatchData, batch => batch.BatchNumber == updatedBatch.BatchNumber)
+    //     );
+    //     var update = Builders<Log>.Update
+    //         .Set(log => log.BatchData[batchNumber].isUploaded, updatedBatch.isUploaded)
+    //         .Set(log => log.BatchData[batchNumber].command, updatedBatch.command);
+
+    //     await _logCollection.UpdateOneAsync(filter, update);
+    // }
+    public async Task UpdateBatchUploadAsync(string logId, BatchUpload updatedBatch,int BatchNumber)
+    {
+        // Step 1: Retrieve the Log document
+        var log = await _logCollection.Find(log => log.fileId == logId).FirstOrDefaultAsync();
+
+        if (log != null)
+        {
+            // Step 2: Find the index of the BatchUpload to be updated
+            var index = log.BatchData.FindIndex(b => b.BatchNumber == BatchNumber);
+
+            if (index != -1)
+            {
+                // Step 3: Update the specific BatchUpload element
+                log.BatchData[index] = updatedBatch;
+
+                // Step 4: Replace the entire Log document
+                await _logCollection.ReplaceOneAsync(log => log.fileId == logId, log);
+            }
+            else
+            {
+                Console.WriteLine("Batch not found.");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Log not found.");
+        }
     }
 
     public async Task RemoveAsync(string id) =>
         await _logCollection.DeleteOneAsync(x => x.fileId == id);
     }
+    
 }

@@ -33,6 +33,7 @@ using processing.Service;
 using worker;
 using worker.Service;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 public class Program
 {
@@ -40,11 +41,9 @@ public class Program
     {
         var host = CreateHostBuilder(args).Build();
 
-        // Resolve the Upload service and start it
         var uploadService = host.Services.GetRequiredService<Upload>();
         uploadService.Start();
 
-        // Keep the host running
         await host.RunAsync();
     }
 
@@ -64,5 +63,8 @@ public class Program
                     return new LogService(settings);
                 });
             });
+            // .ConfigureLogging(builder =>{
+            //     builder.AddLog4Net("D:/work/zeustraining/todo/FINSHARK/uploader/worker/logs/log4net.config");
+            // });
 }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Mail;
 using System.Text;
@@ -12,14 +13,18 @@ using Newtonsoft.Json;
 using processing.Service;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using worker.Service;
 namespace processing
 {
     public class ProcessingFile{
         ConnectionFactory factory;
         private readonly SaveLog _savelog;
-        public ProcessingFile(SaveLog saveLog){
+        private readonly LogService _logService;
+
+        public ProcessingFile(SaveLog saveLog,LogService logService){
             factory = new ConnectionFactory { HostName = "localhost" };
             _savelog = saveLog;
+            _logService = logService ?? throw new ArgumentNullException(nameof(logService));;
         }
 
 
@@ -54,6 +59,24 @@ namespace processing
         Console.WriteLine(" Press [enter] to exit.");
         Console.ReadLine();
     }
+    public static string CompressString(string text)
+{
+    byte[] buffer = Encoding.UTF8.GetBytes(text);
+
+    using (var memoryStream = new MemoryStream())
+    {
+        // Write the buffer length as the first 4 bytes
+        memoryStream.Write(BitConverter.GetBytes(buffer.Length), 0, 4);
+
+        using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true))
+        {
+            gZipStream.Write(buffer, 0, buffer.Length);
+        }
+
+        return Convert.ToBase64String(memoryStream.ToArray());
+    }
+}
+
     private async Task<bool> ParseFile(StreamReader reader,Log log){
         StringBuilder command = new StringBuilder("INSERT INTO Users (Name,EmaiL,Country,State,City,Telephone,AddressLine1,AddressLine2,DateOfBirth,FY_2019_20,FY_2020_21,FY_2021_22) VALUES");
         string startCmd = "INSERT INTO Users (Name,EmaiL,Country,State,City,Telephone,AddressLine1,AddressLine2,DateOfBirth,FY_2019_20,FY_2020_21,FY_2021_22) VALUES";
@@ -86,10 +109,18 @@ namespace processing
                 // SalaryCommand = new StringBuilder("INSERT IGNORE INTO salary (SalaryId,FY_2019_20,FY_2020_21,FY_2021_22,UserId) VALUES");
                 // Console.WriteLine($"Batch {batches++} send");
                 batches++;
+                log.BatchData.Add(new BatchUpload{
+                    isUploaded = false,
+                    BatchNumber = batches,
+                    command = cmd
+                });
                 // if(cmd != startCmd){
                 if(reader.Peek() <= 0){
-                    // log.totalNumberOfBatchesCreated = batches;
-                    cmd = $"{cmd}|{batches}";
+                    
+                    log.status = "Processed";
+                    log.totalNumberOfBatchesCreated = batches;
+                    _logService.UpdateAsync(log.fileId,log);
+                    Console.WriteLine("Data Processing Log Updated");
                 }
                 DatabaseSend(cmd,log);
                 // }else{
@@ -97,6 +128,7 @@ namespace processing
                 // }
             }
         }   
+        
         Console.WriteLine("Complete Data Proceesed");
         return true;
     }
