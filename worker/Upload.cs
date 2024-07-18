@@ -52,47 +52,26 @@ namespace worker
             Buffer.BlockCopy(BitConverter.GetBytes(buffer.Length), 0, gZipBuffer, 0, 4);
             return Convert.ToBase64String(gZipBuffer);
         }
-        // public static string DecompressString(string compressedText)
-        // {
-        //     // string converted = compressedText.Replace('-', '+');
-        //     // converted = converted.Replace('_', '/');
-        //     byte[] gZipBuffer = Encoding.UTF8.GetBytes(compressedText);;
-        //     using (var memoryStream = new MemoryStream())
-        //     {
-        //         int dataLength = BitConverter.ToInt32(gZipBuffer, 0);
-        //         memoryStream.Write(gZipBuffer, 4, gZipBuffer.Length - 4);
-
-        //         var buffer = new byte[dataLength];
-
-        //         memoryStream.Position = 0;
-        //         using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
-        //         {
-        //             gZipStream.Read(buffer, 0, buffer.Length);
-        //         }
-
-        //         return Encoding.UTF8.GetString(buffer);
-        //     }
-        // }
-       public static string DecompressString(string compressedText)
-{
-    byte[] gZipBuffer = Convert.FromBase64String(compressedText);
-
-    using (var memoryStream = new MemoryStream(gZipBuffer))
-    {
-        // Read the first 4 bytes to get the original buffer length
-        var bufferLengthBytes = new byte[4];
-        memoryStream.Read(bufferLengthBytes, 0, 4);
-        int bufferLength = BitConverter.ToInt32(bufferLengthBytes, 0);
-
-        using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+        public static string DecompressString(string compressedText)
         {
-            byte[] buffer = new byte[bufferLength];
-            gZipStream.Read(buffer, 0, buffer.Length);
+            byte[] gZipBuffer = Convert.FromBase64String(compressedText);
 
-            return Encoding.UTF8.GetString(buffer);
+            using (var memoryStream = new MemoryStream(gZipBuffer))
+            {
+                // Read the first 4 bytes to get the original buffer length
+                var bufferLengthBytes = new byte[4];
+                memoryStream.Read(bufferLengthBytes, 0, 4);
+                int bufferLength = BitConverter.ToInt32(bufferLengthBytes, 0);
+
+                using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                {
+                    byte[] buffer = new byte[bufferLength];
+                    gZipStream.Read(buffer, 0, buffer.Length);
+
+                    return Encoding.UTF8.GetString(buffer);
+                }
+            }
         }
-    }
-}
 
         public  void Start(){
             using var RabbitMQconnection = factory.CreateConnection();
@@ -116,20 +95,6 @@ namespace worker
                         Console.WriteLine($"Waiting {timeToWait.TotalSeconds} seconds");
                         return timeToWait;
                         });
-            // var fallbackPolicy = Policy
-            // .Handle<Exception>()
-            // .FallbackAsync(async (context, ct) => {
-            //     if (context.ContainsKey("LastCommand"))
-            //     {
-            //         string fallbackData = context["LastCommand"] as string;
-            //         exhaustedCommands.Add(fallbackData);
-            //         // Console.WriteLine($"Added to exhausted commands: {fallbackData}");
-            //     }
-            // }, async (exception, context) => {
-            //     // Console.WriteLine($"Exception for fallback: {exception.Message}");
-            // });
-
-            // var _policyWrap = Policy.WrapAsync( fallbackPolicy,_retryPolicy);
             Log log = new();
             var batch =0;
             var consumer = new EventingBasicConsumer(channel);
