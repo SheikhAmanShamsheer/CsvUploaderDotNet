@@ -6,17 +6,19 @@ class rect {
         this.width = width;
         this.height = height;
         this.text = text;
+        
         this.context = context
-        this.draw = (t = "") => {
-            // console.log(color);
-            this.context.fillStyle = "black"
-            this.context.beginPath();
-            this.context.rect(this.x, this.y, this.width, this.height);
-            this.context.stroke();
+        this.draw = (t = this.text) => {
+            // let random = Math.random()*(255-10)+10;
+            // this.context.fillStyle = `rgb(${random},${random},${random})`
+            // this.context.strokeStyle = "rgb(196,199,197)"
+            // this.context.beginPath();
+            // this.context.fillRect(this.x, this.y, this.width, this.height);
+            // this.context.stroke();
             this.context.font = "16px Arial";
             this.context.textAlign = "center";
             this.context.textBaseline = "middle";
-            this.context.fillText(this.text, this.x + this.width / 2, this.y + this.height / 2);
+            this.context.fillText(t, this.x + this.width / 2, this.y + this.height / 2);
         };
         
     }
