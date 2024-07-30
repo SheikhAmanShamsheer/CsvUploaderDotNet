@@ -6,7 +6,7 @@ import GridFromLines from "./GridFromLines.js"
 
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
-canvas.width = 2700
+canvas.width = 2700;
 canvas.height = 5000;
 
 // const leftCanvas = document.getElementById("left");
@@ -24,42 +24,47 @@ canvas.height = 5000;
 // var left = new leftBorder(25,0,leftC,leftCanvas)
 
 
-// const apiUrl = 'http://localhost:5239/api/user';
+const apiUrl = 'http://localhost:5239/api/user';
 
-// async function fetchData(){
-//     let data = []
-//     try{
-//         const response = await fetch(apiUrl);
-//         const apiData = await response.json();
-//         // let apidata = data;
-//         // apidata = data.map(data => Object.values(data));
-//         // console.log("data",Object.values(apiData[0]));
+async function fetchData(){
+    let data = []
+    try{
+        const response = await fetch(apiUrl);
+        const apiData = await response.json();
+        // let apidata = data;
+        // apidata = data.map(data => Object.values(data));
+        // console.log("data",Object.values(apiData[0]));
         
-//         for(let i=0;i<apiData.length;i++){
-//             data.push(Object.values(apiData[i]))
-//         }
-//     }
-//     catch(error)
-//     {
-//         console.log(error);
-//     }
-//     return data
-// }
-// // // // // // // // // // let data = await fetchData()
+        for(let i=0;i<apiData.length;i++){
+            data.push(Object.values(apiData[i]))
+        }
+    }
+    catch(error)
+    {
+        console.log(error);
+    }
+    return data
+}
+
+let data = [];
+try{
+    data = await fetchData();
+}catch{
+    
+}
 
 
-
-let gridLines = new GridFromLines(canvas,context)
+let gridLines = new GridFromLines(canvas,context,data)
 gridLines.drawCanvas();
 
 
-canvas.addEventListener("mousedown",(event)=>{
+canvas.addEventListener("pointerdown",(event)=>{
     gridLines.handleMouseDown(event);
 })
-canvas.addEventListener("mousemove",(event)=>{
+canvas.addEventListener("pointermove",(event)=>{
     gridLines.handleMouseMove(event);
 })
-canvas.addEventListener("mouseup",()=>{
+canvas.addEventListener("pointerup",()=>{
     gridLines.handleMouseUp();
 })
 canvas.addEventListener("dblclick",(event)=>{
