@@ -6,7 +6,6 @@ class rect {
         this.width = width;
         this.height = height;
         this.text = text;
-        
         this.context = context
         this.draw = (t = this.text) => {
             // let random = Math.random()*(255-10)+10;

@@ -16,57 +16,172 @@ class GridFromLines{
         this.end = new rect(-1,-1,this.width,this.height,"",this.context);
         this.isSelecting = 0; 
         this.isIncreasing = 0;
-        this.numberOfCells = (this.canvas.width/this.width)*(this.canvas.height/this.height)+500;
-        this.data = data;
-        this.singleDataLength = data[0].length;
+        this.numberOfCells = Math.floor((this.canvas.width/this.width)*(this.canvas.height/this.height));
+        this.numberOfColumns =  Math.floor((this.canvas.width/this.width));
+        this.numberOfRows = Math.floor((this.canvas.height/this.height));
+        this.scrollY = 0;
+        this.st = 0;
+        this.apiCallCount = 0;
+        this.apiCallCheck = 76;
+        this.lastRow = 0;
         this.gridData = []
-        if(this.data == []){
-            this.gridData = new Array(this.numberOfCells).fill(" "); // .map((numberOfCells, i) => numberOfCells + i);
-        }else{
-            this.data  = this.data.flat(1);
-            let k = 0;
-            this.gridData = new Array(this.numberOfCells).fill(" ")
-            for(let i=0;i<this.data.length;i++){
-                let og = this.data[i];
-                if(i % this.singleDataLength == 0 && i != 0) k += 14;
-                this.gridData[k] = og;
-                k++;
-            }
-            // console.log("gridData: ",this.gridData)
-        }
-        this.widthArray = new Array(this.numberOfCells).fill(100)
-        this.heightArray = new Array(this.numberOfCells).fill(30)
+        this.startRow = 0;
+        this.data = data;
+        this.checkPoint = 70;
+        this.nextStartPoint = 101;
+        // this.widthArray = new Array(this.numberOfColumns).fill(100)
+        // this.heightArray = new Array(this.numberOfRows).fill(30)
+        this.widthArray = [];
+        this.heightArray = [];
+        // if(this.data == []){
+        //     this.gridData = new Array(this.numberOfCells).fill(" "); // .map((numberOfCells, i) => numberOfCells + i);
+        // }else{
+        //     // this.data  = this.data.flat(1);
+        //     this.gridData = new Array(this.numberOfCells).fill(" ")
+        //     this.singleDataLength = this.data[0].length;
+        //     let k = 0;
+        //     for(let i=0;i<this.data.length;i++){
+        //         for(let j=0;j<this.numberOfColumns;j++){
+        //             if(j < this.singleDataLength){
+        //                 this.gridData[k] = this.data[i][j];
+        //                 // this.widthArray[k] = this.width;
+        //                 // this.heightArray[k] = this.height;
+        //                 k++;
+        //             }else{
+        //                 this.gridData[k] = ""
+        //                 // this.widthArray[k] = this.width;
+        //                 // this.heightArray[k] = this.height;
+        //                 k++;
+        //             }
+        //         }
+        //     }
+        //     console.log("gridData: ",this.gridData)
+        // }
+        
         this.s = new rect(-1,-1,this.width,this.height,"",this.context);
         this.detector = 0;
         this.factor = 0;
         this.found = new rect(-1,-1,this.width,this.height,"",this.context);
-        this.initailX = 0;
+        this.initailX = -1;
+        this.initailY = -1;
         this.drawGrid()
+        this.setData()
+    }
+    setCanvas(c){
+        this.canvas = c;
+        this.numberOfCells = Math.floor((this.canvas.width/this.width)*(this.canvas.height/this.height));
+        this.numberOfColumns =  Math.floor((this.canvas.width/this.width));
+    }
+    setData(){
+        if(this.data == []){
+            this.gridData = new Array(this.numberOfCells).fill(" "); // .map((numberOfCells, i) => numberOfCells + i);
+        }else{
+            // this.data  = this.data.flat(1);
+            this.gridData = new Array(this.numberOfCells).fill(" ")
+            this.singleDataLength = this.data[0].length;
+            let k = 0;
+            for(let i=this.st;i<this.data.length;i++){
+                for(let j=0;j<this.numberOfColumns;j++){
+                    if(j < this.singleDataLength){
+                        this.data[i][j]
+                        this.gridData[k] = this.data[i][j];
+                        // this.widthArray[k] = this.width;
+                        // this.heightArray[k] = this.height;
+                        k++;
+                    }else{
+                        this.gridData[k] = ""
+                        // this.widthArray[k] = this.width;
+                        // this.heightArray[k] = this.height;
+                        k++;
+                    }
+                }
+            }
+            // console.log("gridData: ",this.gridData)
+        }
+    }
+    async fetchData(){
+        // this.st += 40;
+        console.log("data fetching")
+        const apiUrl = `http://localhost:5239/api/user/${this.nextStartPoint}`;
+        this.nextStartPoint += 70;
+        console.log("next start point: ",this.nextStartPoint)
+        let data = []
+        try{
+            const response = await fetch(apiUrl);
+            const apiData = await response.json();
+            // let apidata = data;
+            // apidata = data.map(data => Object.values(data));
+            // console.log("data",Object.values(apiData[0]));
+            
+            for(let i=0;i<apiData.length;i++){
+                data.push(Object.values(apiData[i]))
+            }
+        }
+        catch(error)
+        {
+            console.log(error);
+        }
+        this.data.push(...data);
     }
     updateGrid(){
         if(this.factor != 0){
-            for(let i=0;i<this.top.length;i++){
-                if(this.top[i].x == this.initailX){
-                    this.top[i].width += this.factor;
+            if(this.initailX != -1){
+                console.log("inside X")
+                for(let i=0;i<this.top.length;i++){
+                    if(this.top[i].x == this.initailX){
+                        this.top[i].width += this.factor;
+                    }
+                    if(this.top[i].x > this.initailX){
+                        let iX = this.top[i].x; 
+                        this.top[i].x += this.factor;
+                        this.widthArray[this.top[i].x] = this.widthArray[iX];
+                    }
                 }
-                if(this.top[i].x > this.initailX){
-                    this.top[i].x += this.factor;
+                for(let i=0;i<this.grid.length;i++){
+                    if(this.grid[i].x == this.initailX){
+                        this.grid[i].width += this.factor;
+                    }
+                    if(this.grid[i].x > this.initailX){
+                        let iX = this.grid[i].x;
+                        this.grid[i].x += this.factor;
+                        this.widthArray[this.grid[i].x] = this.widthArray[iX];
+                    }
                 }
             }
-            for(let i=0;i<this.grid.length;i++){
-                if(this.grid[i].x == this.initailX){
-                    this.grid[i].width += this.factor;
+            if(this.initailY != -1){
+                console.log("inside Y")
+                for(let i=0;i<this.left.length;i++){
+                    if(this.left[i].y == this.initailY){
+                        this.left[i].height += this.factor;
+                    }
+                    if(this.left[i].y > this.initailY){
+                        let iY = this.left[i].y; 
+                        this.left[i].y += this.factor;
+                        this.heightArray[this.left[i].y] = this.heightArray[iY];
+                    }
                 }
-                if(this.grid[i].x > this.initailX){
-                    this.grid[i].x += this.factor;
+                for(let i=0;i<this.grid.length;i++){
+                    if(this.grid[i].y == this.initailY){
+                        this.grid[i].height += this.factor;
+                    }
+                    if(this.grid[i].y > this.initailY){
+                        let iY = this.grid[i].y;
+                        this.grid[i].y += this.factor;
+                        this.heightArray[this.grid[i].y] = this.heightArray[iY];
+                    }
                 }
             }
+            
         }
     }
     drawGrid(){
+        // this.context.clearRect(0,0,this.canvas.width,this.canvas.height)
         let letters = 0;
-        let left = 0;
+        let left = this.st;
         let k = 0;
+        this.left = [];
+        this.top = [];
+        this.grid = [];
         for(let i=0;i<this.canvas.height;i+=this.height){
             let j = 0;
             while(j <= this.canvas.width){
@@ -76,26 +191,52 @@ class GridFromLines{
                         text = String.fromCharCode('A'.charCodeAt(0) + letters++);
                     }
                     let x = j ,y=i;
-                    this.top.push(new rect(x,y,this.widthArray[j],this.heightArray[i],text,this.context))
+                    this.widthArray[x] = 100;
+                    this.heightArray[y] = 30;
+                    this.top.push(new rect(x,y,this.widthArray[x],this.heightArray[y],text,this.context))
                 }else if(j == 0){
+                    this.widthArray[j] = 100;
+                    this.heightArray[i] = 30;
                     this.left.push(new rect(j,i,this.widthArray[j],this.heightArray[i],++left,this.context))
                 }
                 else{
                     let x = j ,y=i;
-                    this.grid.push(new rect(x,y,this.widthArray[j],this.heightArray[i],this.gridData[k++],this.context))
+                    this.widthArray[x] = 100;
+                    this.heightArray[y] = 30;
+                    this.grid.push(new rect(x,y,this.widthArray[x],this.heightArray[y],this.gridData[k],this.context))
                 }
                 j += this.width;
+                k++;
+            }
+        }
+        // console.log(this.top,this.grid,this.left)
+    }
+    drawTopSelected(){
+
+        if(this.end.x == -1) this.end = this.start;
+        for(let i=0;i<this.top.length;i++){
+            if((this.top[i].x >= this.start.x && this.top[i].x <= this.end.x) || (this.top[i].x <= this.start.x && this.top[i].x >= this.end.x)){
+                this.drawGridCells(this.top[i])
             }
         }
     }
-    drawCanvas(increasing = 0){
+    drawLeftSelected(){
+        for(let i=0;i<this.left.length;i++){
+            if((this.left[i].y >= this.start.y && this.left[i].y <= this.end.y)||(this.left[i].y <= this.start.y && this.left[i].y >= this.end.y)){
+                this.drawGridCells(this.left[i])
+            }
+        }
+    }
+
+    drawCanvas(increasing = 0,scrolling=0){
         this.context.clearRect(0,0,this.canvas.width,this.canvas.height)
         this.drawLines(increasing);
         this.drawTop();
-        this.drawLeft();
+        this.drawLeft(scrolling);
         this.drawData();
         // requestAnimationFrame(this.drawCanvas)
     }
+
     drawLines(increasing = 0){
         let x = 0;
         let y = 0;
@@ -117,6 +258,10 @@ class GridFromLines{
             this.context.moveTo(x, y+0.5);
             this.context.lineTo(this.canvas.width,y+0.5);
             this.context.stroke();
+            // console.log("diff: ",(this.heightArray[y]+this.factor > 0))
+            if(y == this.initailY && increasing && (this.heightArray[y]+this.factor > 0)){
+                this.heightArray[y] += this.factor;
+            }
             y += this.heightArray[y];
         }
     }
@@ -142,8 +287,11 @@ class GridFromLines{
             this.top[i].draw();
         }
     }
-    drawLeft(){
+    drawLeft(scrolling=0){
         for(let i=0;i<this.left.length;i++){
+            // if(scrolling != 0 && parseInt(this.left[i].text) >= 1){
+            //     this.left[i].text = String(parseInt(this.left[i].text) + 3*scrolling);    
+            // }
             this.left[i].draw();
         }
     }
@@ -155,6 +303,7 @@ class GridFromLines{
             }
         }
     }
+
     findCell(x,y){
         if(x >= 100 && y > 30){
             return this.find(x,y,this.grid);
@@ -164,6 +313,7 @@ class GridFromLines{
             return this.find(x,y,this.left);
         }
     }
+
     selectEntireColumn(cell){
         let selectedColumn = [];
         let y = this.height;
@@ -251,6 +401,7 @@ class GridFromLines{
                     this.drawGridCells(this.grid[i])
                 }
             }
+            // console.log(g);
             
             
             let topLeft = new rect(-1,-1,this.width,this.height,"",this.context);
@@ -322,6 +473,7 @@ class GridFromLines{
         this.context.stroke();
     }
     drawVirtualLine(startX,startY,endX,endY){
+        console.log("drawing line")
         this.context.strokeStyle = "grey";
         this.context.beginPath();
         this.context.moveTo(startX,startY);
@@ -357,9 +509,14 @@ class GridFromLines{
         const y = event.offsetY;
         let a = this.findCell(x,y);
         let found = a[0];
-        if(x >= found.x+this.widthArray[found.x]-20 && x <= found.x+this.widthArray[found.x]-5 && y < 30){
+        if((x >= found.x+this.widthArray[found.x]-10 && x <= found.x+this.widthArray[found.x]-5 && y < 30)){
             this.isIncreasing = 1;
             this.initailX = found.x;
+            console.log("top")
+        }else if(y >= this.found.y+this.heightArray[this.found.y]-10 && y <= this.found.y+this.heightArray[this.found.y]-2){
+            this.initailY = found.y;
+            this.isIncreasing = 1;
+            console.log("left")
         }else{
             this.canvas.style.cursor = "pointer";
             let i = a[1];
@@ -369,6 +526,8 @@ class GridFromLines{
                 // this.start.y = found.y;
                 this.start = found;
                 this.drawSelectedGrid();
+                this.drawTopSelected();
+                this.drawLeftSelected();
             }else {
                 this.drawCellBorder(found)
             }
@@ -390,19 +549,22 @@ class GridFromLines{
                 this.end = found;
             }
             this.drawSelectedGrid();
+            this.drawTopSelected();
+            this.drawLeftSelected();
         }
         let a = this.find(x,y,this.top);
+        let b = this.find(x,y,this.left);
         if(a != null){
             this.found = a[0];
             let i = a[1];
-            if(this.initailX == 0){
+            if(this.initailX == -1){
                 this.s.x = this.found.x;
                 this.s.y = this.found.y
-                console.log("top selected: ",this.top[i]);
-                this.initailX = this.found.x;
+                // console.log("top selected: ",this.top[i]);
+                // this.initailX = this.found.x;
                 this.detector = 1;
             }
-            if((x >= this.found.x+this.widthArray[this.found.x]-20 && x <= this.found.x+this.widthArray[this.found.x]-5  && y < 30) || this.isIncreasing){
+            if((x >= this.found.x+this.widthArray[this.found.x]-10 && x <= this.found.x+this.widthArray[this.found.x]-5  && y < 30) || this.isIncreasing){
                 this.canvas.style.cursor = "col-resize";
                 if(this.isIncreasing == 1){
                     let factor = x-(this.s.x);
@@ -414,16 +576,48 @@ class GridFromLines{
                 this.canvas.style.cursor = "pointer";
             }
         }
+        if(b != null){
+            this.found = b[0];
+            let i = b[1];
+            if(this.initailY == -1){
+                this.s.x = this.found.x;
+                this.s.y = this.found.y
+                // console.log("left selected: ",this.left[i]);
+                // this.initailX = this.found.x;
+                this.detector = 1;
+            }
+            if((y >= this.found.y+this.heightArray[this.found.y]-10 && y <= this.found.y+this.heightArray[this.found.y]-2) || this.isIncreasing){
+                this.canvas.style.cursor = "row-resize";
+                if(this.isIncreasing == 1){
+                    let factor = y-(this.s.y);
+                    this.s.y += factor;
+                    this.drawCanvas()
+                    this.drawVirtualLine(this.s.x,this.s.y,this.canvas.width,this.s.y);
+                }
+            }else{
+                this.canvas.style.cursor = "pointer";
+            }
+        }
         
     }
     handleMouseUp(){
         if(this.isIncreasing == 1){
             this.isIncreasing = 0;
-            this.factor = this.s.x-(this.initailX+this.widthArray[this.initailX])
-            console.log("difference: ",this.s.x-(this.initailX+this.widthArray[this.initailX]));
-            this.updateGrid()
-            this.drawCanvas(1)
-            this.initailX = 0;
+            if(this.initailX != -1){
+                this.factor = this.s.x-(this.initailX+this.widthArray[this.initailX])
+                console.log("difference: ",this.s.x-(this.initailX+this.widthArray[this.initailX]));
+                this.updateGrid()
+                this.drawCanvas(1)
+                this.initailX = -1;
+            }
+            if(this.initailY != -1){
+                this.factor = this.s.y-(this.initailY+this.heightArray[this.initailY])
+                console.log("difference: ",this.s.y-(this.initailY+this.heightArray[this.initailY]));
+                this.updateGrid()
+                this.drawCanvas(1)
+                this.initailY = -1;
+            }
+            
         }
         this.detector = 0;
         this.isSelecting = 0;
@@ -436,10 +630,13 @@ class GridFromLines{
         const rect = this.canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
-        let a = this.findCell(x,y);
-        let found = a[0];
-        let i = a[1];
-        this.createInputField(found,i);
+        if(x > 100 && y > 30){
+            let a = this.findCell(x,y);
+            let found = a[0];
+            let i = a[1];
+            this.createInputField(found,i);
+        }
+        
     }
     
     measureTextWidth(text, font) {
@@ -449,26 +646,84 @@ class GridFromLines{
         return context.measureText(text).width;
     }
     
-
-    textWrap(text){
-        if(text.length >= 10){
-            let showValue = text.substring(0,5);
-            showValue += "..."
-            return showValue;
+    async handelScroll(event,f){
+        if(this.scrollY <= 0 && event.deltaY < 0){
+            this.scrollY = 0;
+        }else{
+            this.scrollY += event.deltaY;
         }
-        return text;
-        
+        this.st = Math.floor(this.scrollY/100);
+        // this.st = Math.max(this.st,0);
+        console.log(this.scrollY,event.deltaY,this.st,this.st+24);
+        if(this.st+24  >= this.checkPoint){
+            this.checkPoint += 40;
+            // this.lastRow = this.st+24;
+            console.log("fetch called");
+            this.fetchData();
+        }
+        // this.st = Math.max(this.st,0);
+        this.setData();
+        this.drawGrid();
+        this.drawCanvas();
+
+
+
+
+
+
+
+        // let totalHeight = 0;
+        // this.scrollY += event.deltaY;
+        // // if(this.scrollY > 780){
+        // //     this.scrollY = 0;
+        // // }
+        // console.log("scrollY: ",this.scrollY)
+        // for(let i=0;i<this.grid.length;i+=this.heightArray[i]){
+        //     totalHeight += this.heightArray[i];
+        //     console.log(totalHeight);
+        //     if(totalHeight >= this.scrollY){
+        //         console.log("insie: ",Math.floor(totalHeight/30));
+        //         this.startRow = Math.floor(totalHeight/30)-1
+        //         await this.fetchData();
+        //         this.setData();
+        //         this.drawGrid();
+        //         this.drawCanvas();
+        //         break;
+        //     }
+            
+        // }
+        // this.scrollY += 3*f;
+        // this.scrollY = Math.max(this.scrollY,0);
+        // console.log("sy: ",this.scrollY)
+        // // if(this.scrollY >= 10){
+        //     await this.fetchData();
+        // // }
+        // this.setData();
+        // this.drawGrid();
+        // this.drawCanvas(0,1*f);
     }
 
-    createInputField(cell,index) {
+    textWrap(text){
+        if(text != undefined){
+            if(text.length >= 10){
+                let showValue = text.substring(0,5);
+                showValue += "..."
+                return showValue;
+            }
+            return text;
+        }
+        return "";
+    }
+
+    createInputField(cell,i) {
         const input = document.createElement("input");
         input.type = "text";
-        input.value = cell.text;
+        input.value = this.gridData[i];
         input.style.position = "absolute";
-        input.style.left = `${cell.x }px`;
-        input.style.top = `${cell.y}px`;
-        input.style.width = `${cell.width }px`;
-        input.style.height = `${cell.height }px`; 
+        input.style.left = `${this.grid[i].x }px`;
+        input.style.top = `${this.grid[i].y}px`;
+        input.style.width = `${this.grid[i].width }px`;
+        input.style.height = `${this.grid[i].height }px`; 
         input.style.fontSize = "12px"; 
         input.style.border = "1px solid #rgb(221,221,221)";
         input.style.boxSizing = "border-box";
@@ -478,7 +733,7 @@ class GridFromLines{
         
         input.addEventListener("blur", () => {
             this.context.clearRect(0,0,this.canvas.width,this.canvas.height)
-            this.gridData[index] = input.value;
+            this.gridData[i] = input.value;
             document.body.removeChild(input);
             this.drawCanvas()
         });

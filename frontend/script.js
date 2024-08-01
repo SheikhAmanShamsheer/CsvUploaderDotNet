@@ -6,8 +6,8 @@ import GridFromLines from "./GridFromLines.js"
 
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
-canvas.width = 2700;
-canvas.height = 5000;
+canvas.width = window.innerWidth-20;
+canvas.height = window.innerHeight-20;
 
 // const leftCanvas = document.getElementById("left");
 // leftCanvas.width = 100;
@@ -24,9 +24,9 @@ canvas.height = 5000;
 // var left = new leftBorder(25,0,leftC,leftCanvas)
 
 
-const apiUrl = 'http://localhost:5239/api/user';
 
 async function fetchData(){
+    const apiUrl = `http://localhost:5239/api/user`;
     let data = []
     try{
         const response = await fetch(apiUrl);
@@ -70,7 +70,30 @@ canvas.addEventListener("pointerup",()=>{
 canvas.addEventListener("dblclick",(event)=>{
     gridLines.handleDoubleClick(event);
 })
-
+canvas.addEventListener("wheel",(event)=>{
+    // var st = window.scrollY || document.documentElement.scrollTop; // Credits: "https://github.com/qeremy/so/blob/master/so.dom.js#L426"
+    // if (st > lastScrollTop) {
+        //     f = 1;
+        // } else if (st < lastScrollTop) {
+            //     f = -1
+            // } // else was horizontal scroll
+            // let lastScrollTop = st <= 0 ? 0 : st;
+    let f = 1;
+    if(event.deltaY < 0){
+        f = -1
+    }
+    gridLines.handelScroll(event,f)
+})
+window.addEventListener("resize",(event)=>{
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.width = window.innerWidth;
+    canvas.style.height = window.innerHeight;
+    gridLines.setCanvas(canvas);
+    gridLines.setData()
+    gridLines.drawGrid()
+    gridLines.drawCanvas()
+})
 
 
 
