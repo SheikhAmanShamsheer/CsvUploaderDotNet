@@ -6,8 +6,8 @@ import GridFromLines from "./GridFromLines.js"
 
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
-canvas.width = window.innerWidth-20;
-canvas.height = window.innerHeight-20;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight-5;
 
 // const leftCanvas = document.getElementById("left");
 // leftCanvas.width = 100;

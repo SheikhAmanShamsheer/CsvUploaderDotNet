@@ -7,7 +7,7 @@ class rect {
         this.height = height;
         this.text = text;
         this.context = context
-        this.draw = (t = this.text) => {
+        this.draw = (t = this.text,width=0,height=0) => {
             // let random = Math.random()*(255-10)+10;
             // this.context.fillStyle = `rgb(${random},${random},${random})`
             // this.context.strokeStyle = "rgb(196,199,197)"
@@ -17,7 +17,7 @@ class rect {
             this.context.font = "16px Arial";
             this.context.textAlign = "center";
             this.context.textBaseline = "middle";
-            this.context.fillText(t, this.x + this.width / 2, this.y + this.height / 2);
+            this.context.fillText(t, this.x + width / 2, this.y + height / 2);
         };
         
     }

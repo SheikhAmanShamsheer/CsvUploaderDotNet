@@ -193,17 +193,17 @@ class GridFromLines{
                     let x = j ,y=i;
                     this.widthArray[x] = 100;
                     this.heightArray[y] = 30;
-                    this.top.push(new rect(x,y,this.widthArray[x],this.heightArray[y],text,this.context))
+                    this.top.push(new rect(x,y,0,0,text,this.context))
                 }else if(j == 0){
                     this.widthArray[j] = 100;
                     this.heightArray[i] = 30;
-                    this.left.push(new rect(j,i,this.widthArray[j],this.heightArray[i],++left,this.context))
+                    this.left.push(new rect(j,i,0,0,++left,this.context))
                 }
                 else{
                     let x = j ,y=i;
                     this.widthArray[x] = 100;
                     this.heightArray[y] = 30;
-                    this.grid.push(new rect(x,y,this.widthArray[x],this.heightArray[y],this.gridData[k],this.context))
+                    this.grid.push(new rect(x,y,0,0,"",this.context))
                 }
                 j += this.width;
                 k++;
@@ -212,7 +212,6 @@ class GridFromLines{
         // console.log(this.top,this.grid,this.left)
     }
     drawTopSelected(){
-
         if(this.end.x == -1) this.end = this.start;
         for(let i=0;i<this.top.length;i++){
             if((this.top[i].x >= this.start.x && this.top[i].x <= this.end.x) || (this.top[i].x <= this.start.x && this.top[i].x >= this.end.x)){
@@ -269,13 +268,13 @@ class GridFromLines{
         if(this.gridData[0] == " "){
             for(let i=0;i<this.gridData.length;i++){
                 let wt = this.textWrap(this.gridData[i]);
-                this.grid[i].draw(wt);
+                this.grid[i].draw(wt,this.widthArray[this.grid[i].x],this.heightArray[this.grid[i].y]);
             }
         }else{
             for(let i=0;i<this.gridData.length;i++){
                 let wt = this.textWrap(this.gridData[i]);
                 try{
-                    this.grid[i].draw(wt);
+                    this.grid[i].draw(wt,this.widthArray[this.grid[i].x],this.heightArray[this.grid[i].y]);
                 }catch(e){
 
                 }
@@ -284,21 +283,22 @@ class GridFromLines{
     }
     drawTop(){
         for(let i=0;i<this.top.length;i++){
-            this.top[i].draw();
+            this.top[i].draw(this.top[i].text,this.widthArray[this.top[i].x],this.heightArray[this.top[i].y]);
         }
     }
     drawLeft(scrolling=0){
+        let k = 0;
         for(let i=0;i<this.left.length;i++){
             // if(scrolling != 0 && parseInt(this.left[i].text) >= 1){
             //     this.left[i].text = String(parseInt(this.left[i].text) + 3*scrolling);    
             // }
-            this.left[i].draw();
+            this.left[i].draw(++k,this.widthArray[this.left[i].x],this.heightArray[this.left[i].y]);
         }
     }
     find(x,y,arr){
         for(let i=0;i< arr.length;i++){
             let r = arr[i];
-            if((x >= r.x && x <= (r.x+r.width)) && (y >= r.y && (y <= r.y+r.height))){
+            if((x >= r.x && x <= (r.x+this.widthArray[r.x])) && (y >= r.y && (y <= r.y+this.heightArray[r.y]))){
                 return [r,i]
             }
         }
@@ -345,13 +345,13 @@ class GridFromLines{
     drawCell(cell){
         this.context.strokeStyle ="rgb(0,0,255)"
         this.context.beginPath();
-        this.context.rect(cell.x, cell.y, cell.width, cell.height);
+        this.context.rect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.stroke();
     }
     drawGridCells(cell){
         this.context.fillStyle = "rgba(14,101,235,0.1)";
         this.context.beginPath();
-        this.context.fillRect(cell.x, cell.y, cell.width, cell.height);
+        this.context.fillRect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.fillStyle = "black" // for converting the text color back to black 
     }
     drawSelectedCells(cells){
@@ -365,7 +365,7 @@ class GridFromLines{
 
             this.context.fillStyle = "rgba(14,101,235,0.1)";
             this.context.beginPath();
-            this.context.fillRect(cells[i].x, cells[i].y, cells[i].width, cells[i].height);
+            this.context.fillRect(cells[i].x, cells[i].y, this.widthArray[cells[i].x], this.heightArray[cells[i].y]);
             this.context.fillStyle = "black" // for converting the text color back to black 
 
             // *** for filling text ****
@@ -401,7 +401,7 @@ class GridFromLines{
                     this.drawGridCells(this.grid[i])
                 }
             }
-            // console.log(g);
+            console.log(g);
             
             
             let topLeft = new rect(-1,-1,this.width,this.height,"",this.context);
@@ -485,12 +485,12 @@ class GridFromLines{
         this.context.fillStyle = "blue"
         this.context.strokeStyle = "rgb(255,255,255)"
         this.context.beginPath();
-        this.context.fillRect(cell.x, cell.y, cell.width, cell.height);
+        this.context.fillRect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.fillStyle = "white";
         this.context.font = "16px Arial";
         this.context.textAlign = "center";
         this.context.textBaseline = "middle";
-        this.context.fillText(cell.text, cell.x + cell.width / 2, cell.y + cell.height / 2);
+        this.context.fillText(cell.text, cell.x + this.widthArray[cell.x] / 2, cell.y + this.heightArray[cell.y] / 2);
         this.context.fillStyle = "black";
         this.context.stroke();
         let se = null;
@@ -653,15 +653,12 @@ class GridFromLines{
             this.scrollY += event.deltaY;
         }
         this.st = Math.floor(this.scrollY/100);
-        // this.st = Math.max(this.st,0);
         console.log(this.scrollY,event.deltaY,this.st,this.st+24);
         if(this.st+24  >= this.checkPoint){
             this.checkPoint += 40;
-            // this.lastRow = this.st+24;
             console.log("fetch called");
             this.fetchData();
         }
-        // this.st = Math.max(this.st,0);
         this.setData();
         this.drawGrid();
         this.drawCanvas();
