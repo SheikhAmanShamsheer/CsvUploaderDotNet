@@ -15,8 +15,9 @@ const submitEmail = document.getElementById("findRecord");
 
 const UploadFile = document.getElementById("UploadFile");
 const deleteButton = document.getElementById("deleteBtn");
-
-
+const getDataButton = document.getElementById("GetDataBtn");
+const clearDataBtn = document.getElementById("clearDataBtn");
+const progressBar = document.getElementById("progressBar");
 
 
 async function fetchByEmail(email){
@@ -76,10 +77,13 @@ async function uploadCsv(event) {
         console.log("no of lines: ",data);
         if(data.length > 0) fileInput.value = ""
         let count = await fetchCount();
-        let totalLineUploaded = count-initialCount;
+        let totalLineUploaded =  Math.abs(count-initialCount);
         while(totalLineUploaded < data){
             count = await fetchCount();
-            totalLineUploaded = count-initialCount;
+            let percentageDone = Math.floor((count/85633)*100);
+            progressBar.style.width = percentageDone+"%";
+            // console.log("%",percentageDone)
+            totalLineUploaded = Math.abs(count-initialCount);
             console.log(`Lines to be uploaded: ${data} and lines Uploaded: ${totalLineUploaded}`)
             if(totalLineUploaded == 85633){
                 let data = await fetchData();
@@ -89,6 +93,7 @@ async function uploadCsv(event) {
                 break;
             }   
         }
+        progressBar.style.width = 0+"%";
     } catch (error) {
         console.error("Error:", error);
         alert(data);
@@ -133,10 +138,10 @@ let initialCount = await fetchCount();
 
 
 
-let data = [];
 let userData = undefined;
 
 submitEmail.addEventListener("click",async ()=>{
+    let data = [];
     userData = await fetchByEmail(findEmail.value);
     console.log(userData);
     data.push(userData)
@@ -145,17 +150,47 @@ submitEmail.addEventListener("click",async ()=>{
     gridLines.drawCanvas()
     findEmail.value = ""
 })
-try{
-    data = await fetchData();
-}catch{
-    
-}
 
 
 
 
-let gridLines = new GridFromLines(canvas,context,data)
+let gridLines = new GridFromLines(canvas,context,[])
 gridLines.drawCanvas();
+
+
+
+
+
+clearDataBtn.addEventListener("click",async ()=>{
+    gridLines.setData([]);
+    gridLines.drawGrid()
+    gridLines.drawCanvas()
+    progressBar.style.width = 0+"%";
+
+})
+
+
+getDataButton.addEventListener("click",async ()=>{
+    let data = [];
+    try{
+        data = await fetchData();
+        if(data.length != 0){
+            gridLines.setData(data);
+            gridLines.drawGrid()
+            gridLines.drawCanvas()
+            progressBar.style.width = 100+"%";
+        }else{
+            alert("No data found");
+        }
+        
+
+    }catch{
+        
+    }
+
+})
+
+
 
 
 deleteButton.addEventListener("click", async()=>{
@@ -186,11 +221,7 @@ canvas.addEventListener("dblclick",(event)=>{
     gridLines.handleDoubleClick(event);
 })
 canvas.addEventListener("wheel",(event)=>{
-    let f = 1;
-    if(event.deltaY < 0){
-        f = -1
-    }
-    gridLines.handelScroll(event,f)
+    gridLines.handelScroll(event)
 })
 window.addEventListener("resize",(event)=>{
     canvas.width = window.innerWidth;

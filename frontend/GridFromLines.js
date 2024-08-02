@@ -1,4 +1,5 @@
 import rect from "./rect.js";
+import User from "./User.js";
 
 class GridFromLines{
     constructor(canvas,context,data){
@@ -33,7 +34,9 @@ class GridFromLines{
 
         this.widthArray = new Map();
         this.heightArray = new Map();
-        
+
+
+
         this.s = new rect(-1,-1,this.width,this.height,"",this.context);
         this.detector = 0;
         this.factor = 0;
@@ -41,7 +44,7 @@ class GridFromLines{
         this.initailX = -1;
         this.initailY = -1;
         this.drawGrid()
-        this.setData()
+        // this.setData()
     }
     getRowForDelete(){
         return this.selectedCellForDelete;
@@ -62,7 +65,9 @@ class GridFromLines{
             this.gridData = new Array(this.numberOfCells).fill(" ")
             this.singleDataLength = this.data[0].length;
             let k = 0;
+            let x = 0, y = 0;
             for(let i=this.st;i<this.data.length;i++){
+                x = 0;
                 for(let j=0;j<this.numberOfColumns;j++){
                     if(j < this.singleDataLength){
                         this.gridData[k] = this.data[i][j];
@@ -103,22 +108,26 @@ class GridFromLines{
     updateGrid(){
         if(this.factor != 0){
             if(this.initailX != -1){
+                let flag = 0;
                 console.log("inside X")
                 for(let i=0;i<this.top.length;i++){
-                    if(this.top[i].x == this.initailX){
+                    if(this.top[i].x == this.initailX && this.widthArray[this.top[i].x]+this.factor > Math.floor(this.widthArray[this.top[i].x]*0.30)){
                         this.top[i].width += this.factor;
+                        flag = 1;
                     }
-                    if(this.top[i].x > this.initailX){
+                    if(this.top[i].x > this.initailX && flag){
                         let iX = this.top[i].x; 
                         this.top[i].x += this.factor;
                         this.widthArray[this.top[i].x] = this.widthArray[iX];
                     }
                 }
+                flag = 0;
                 for(let i=0;i<this.grid.length;i++){
-                    if(this.grid[i].x == this.initailX){
+                    if(this.grid[i].x == this.initailX && this.widthArray[this.grid[i].x]+this.factor > Math.floor(this.widthArray[this.grid[i].x]*0.30)){
                         this.grid[i].width += this.factor;
+                        flag = 1;
                     }
-                    if(this.grid[i].x > this.initailX){
+                    if(this.grid[i].x > this.initailX && flag){
                         let iX = this.grid[i].x;
                         this.grid[i].x += this.factor;
                         this.widthArray[this.grid[i].x] = this.widthArray[iX];
@@ -127,22 +136,26 @@ class GridFromLines{
                 }
             }
             if(this.initailY != -1){
+                let flag = 0;
                 console.log("inside Y")
                 for(let i=0;i<this.left.length;i++){
-                    if(this.left[i].y == this.initailY){
+                    if(this.left[i].y == this.initailY && this.heightArray[this.left[i].y]+this.factor > Math.floor(this.heightArray[this.left[i].y]*0.30)){
                         this.left[i].height += this.factor;
+                        flag = 1;
                     }
-                    if(this.left[i].y > this.initailY){
+                    if(this.left[i].y > this.initailY && flag){
                         let iY = this.left[i].y; 
                         this.left[i].y += this.factor;
                         this.heightArray[this.left[i].y] = this.heightArray[iY];
                     }
                 }
+                flag = 0;
                 for(let i=0;i<this.grid.length;i++){
-                    if(this.grid[i].y == this.initailY){
+                    if(this.grid[i].y == this.initailY && this.heightArray[this.grid[i].y]+this.factor > Math.floor(this.heightArray[this.grid[i].y]*0.30)){
                         this.grid[i].height += this.factor;
+                        flag = 1;
                     }
-                    if(this.grid[i].y > this.initailY){
+                    if(this.grid[i].y > this.initailY && flag){
                         let iY = this.grid[i].y;
                         this.grid[i].y += this.factor;
                         this.heightArray[this.grid[i].y] = this.heightArray[iY];
@@ -231,7 +244,7 @@ class GridFromLines{
             this.context.moveTo(x+0.5, y);
             this.context.lineTo(x+0.5,this.canvas.height);
             this.context.stroke();
-            if(this.factor != "a" && x == this.initailX && increasing){
+            if(this.factor != "a" && x == this.initailX && increasing && this.widthArray[x]+this.factor > this.widthArray[x]*0.30){
                 this.widthArray[x] += this.factor;
             }
             x += this.widthArray[x];
@@ -244,7 +257,7 @@ class GridFromLines{
             this.context.lineTo(this.canvas.width,y+0.5);
             this.context.stroke();
             // console.log("diff: ",(this.heightArray[y]+this.factor > 0))
-            if(y == this.initailY && increasing && (this.heightArray[y]+this.factor > 0)){
+            if(y == this.initailY && increasing && (this.heightArray[y]+this.factor >  Math.floor(this.heightArray[y]*0.30))){
                 this.heightArray[y] += this.factor;
             }
             y += this.heightArray[y];
@@ -476,7 +489,7 @@ class GridFromLines{
         this.context.beginPath();
         this.context.fillRect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.fillStyle = "white";
-        this.context.font = "16px Arial";
+        this.context.font = "12px Arial";
         this.context.textAlign = "center";
         this.context.textBaseline = "middle";
         this.context.fillText(cell.text, cell.x + this.widthArray[cell.x] / 2, cell.y + this.heightArray[cell.y] / 2);
@@ -625,7 +638,6 @@ class GridFromLines{
             let i = a[1];
             this.createInputField(found,i);
         }
-        
     }
     
     measureTextWidth(text, font) {
@@ -635,7 +647,7 @@ class GridFromLines{
         return context.measureText(text).width;
     }
     
-    async handelScroll(event,f){
+    async handelScroll(event){
         if(this.scrollY <= 0 && event.deltaY < 0){
             this.scrollY = 0;
         }else{
@@ -665,6 +677,30 @@ class GridFromLines{
         return "";
     }
 
+
+    
+
+    async UpdateCellData(cell){
+        console.log("Update Called")
+        const apiUrl = `http://localhost:5239/api/user/update`;
+        try{
+            const response = await fetch(apiUrl,
+                {
+                    method: "PUT",
+                    body: JSON.stringify(cell),
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                });
+            const apiData = await response.json();
+            alert(apiData)
+        }
+        catch(error)
+        {
+            console.log(error);
+        }
+    }
+
     createInputField(cell,i) {
         const input = document.createElement("input");
         input.type = "text";
@@ -680,9 +716,40 @@ class GridFromLines{
         document.body.appendChild(input);
         input.focus();
         input.select();
-        
+        console.log("cell in inputL: ",cell)
         input.addEventListener("blur", () => {
             this.context.clearRect(0,0,this.canvas.width,this.canvas.height)
+            if(this.gridData[i] != input.value){
+                cell.text = input.value;
+                console.log("changes cell: ",cell.text )
+                let selectedRow = this.selectEntireRow(cell);
+                for(let i=0;i<selectedRow.length;i++){
+                    if(selectedRow[i].x == cell.x && selectedRow[i].y == cell.y){
+                        selectedRow[i].text = cell.text;
+                        break;
+                    }
+                }
+                console.log("len: ",selectedRow.length);
+                let user = new User(
+                    selectedRow[0].text,
+                    selectedRow[1].text,
+                    selectedRow[2].text,
+                    selectedRow[3].text,
+                    selectedRow[4].text,
+                    selectedRow[5].text,
+                    selectedRow[6].text,
+                    selectedRow[7].text,
+                    selectedRow[8].text,
+                    selectedRow[9].text,
+                    selectedRow[10].text,
+                    selectedRow[11].text,
+                    selectedRow[12].text,
+                )
+                console.log(user);
+                // console.log(selectedRow);/
+                // selectedFRow[0] = 
+                this.UpdateCellData(user)
+            }
             this.gridData[i] = input.value;
             document.body.removeChild(input);
             this.drawCanvas()
