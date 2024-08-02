@@ -33,9 +33,21 @@
         }
     </style>
 </head>
-<body>
-    <div style="overflow: hidden;">
-        <canvas id="canvas" style="overflow: hidden;"></canvas> 
+<body style="overflow: hidden;">
+    <div>
+        <input  id="emailInput"  type="text" placeholder="Find by Email" >
+        <button id="findRecord">Find</button>
+        <form  id="UploadForm"  action="" enctype="multipart/form-data">
+            <input  id="fileInput"  type="file" placeholder="Upload file" >
+            <button id="UploadFile">Upload</button>
+        </form>
+        <button id="deleteBtn">Delete</button>
+        <div style="overflow: scroll; position: absolute;">        
+            <canvas id="canvas" style="overflow: hidden; margin-top: 100px;"></canvas>
+            <div style="overflow: scroll; height: 2000px; width: 2000px;">
+
+            </div>
+        </div>
     </div>
     
     <script type="module" src="script.js"></script>

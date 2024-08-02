@@ -29,34 +29,10 @@ class GridFromLines{
         this.data = data;
         this.checkPoint = 70;
         this.nextStartPoint = 101;
-        // this.widthArray = new Array(this.numberOfColumns).fill(100)
-        // this.heightArray = new Array(this.numberOfRows).fill(30)
+        this.selectedCellForDelete = undefined;
+
         this.widthArray = [];
         this.heightArray = [];
-        // if(this.data == []){
-        //     this.gridData = new Array(this.numberOfCells).fill(" "); // .map((numberOfCells, i) => numberOfCells + i);
-        // }else{
-        //     // this.data  = this.data.flat(1);
-        //     this.gridData = new Array(this.numberOfCells).fill(" ")
-        //     this.singleDataLength = this.data[0].length;
-        //     let k = 0;
-        //     for(let i=0;i<this.data.length;i++){
-        //         for(let j=0;j<this.numberOfColumns;j++){
-        //             if(j < this.singleDataLength){
-        //                 this.gridData[k] = this.data[i][j];
-        //                 // this.widthArray[k] = this.width;
-        //                 // this.heightArray[k] = this.height;
-        //                 k++;
-        //             }else{
-        //                 this.gridData[k] = ""
-        //                 // this.widthArray[k] = this.width;
-        //                 // this.heightArray[k] = this.height;
-        //                 k++;
-        //             }
-        //         }
-        //     }
-        //     console.log("gridData: ",this.gridData)
-        // }
         
         this.s = new rect(-1,-1,this.width,this.height,"",this.context);
         this.detector = 0;
@@ -67,13 +43,19 @@ class GridFromLines{
         this.drawGrid()
         this.setData()
     }
+    getRowForDelete(){
+        return this.selectedCellForDelete;
+    }
     setCanvas(c){
         this.canvas = c;
         this.numberOfCells = Math.floor((this.canvas.width/this.width)*(this.canvas.height/this.height));
         this.numberOfColumns =  Math.floor((this.canvas.width/this.width));
     }
-    setData(){
-        if(this.data == []){
+    setData(data = this.data){
+        if(data != this.data){
+            this.data  = data;
+        }
+        if(this.data.length == 0){
             this.gridData = new Array(this.numberOfCells).fill(" "); // .map((numberOfCells, i) => numberOfCells + i);
         }else{
             // this.data  = this.data.flat(1);
@@ -83,15 +65,10 @@ class GridFromLines{
             for(let i=this.st;i<this.data.length;i++){
                 for(let j=0;j<this.numberOfColumns;j++){
                     if(j < this.singleDataLength){
-                        this.data[i][j]
                         this.gridData[k] = this.data[i][j];
-                        // this.widthArray[k] = this.width;
-                        // this.heightArray[k] = this.height;
                         k++;
                     }else{
                         this.gridData[k] = ""
-                        // this.widthArray[k] = this.width;
-                        // this.heightArray[k] = this.height;
                         k++;
                     }
                 }
@@ -191,22 +168,29 @@ class GridFromLines{
                         text = String.fromCharCode('A'.charCodeAt(0) + letters++);
                     }
                     let x = j ,y=i;
-                    this.widthArray[x] = 100;
-                    this.heightArray[y] = 30;
+                    if(this.checkPoint == 70){
+                        this.widthArray[x] = 100;
+                        this.heightArray[y] = 30;
+                    }
+                    
                     this.top.push(new rect(x,y,0,0,text,this.context))
                 }else if(j == 0){
-                    this.widthArray[j] = 100;
-                    this.heightArray[i] = 30;
+                    if(this.checkPoint == 70){
+                        this.widthArray[j] = 100;
+                        this.heightArray[i] = 30;
+                    }
+
                     this.left.push(new rect(j,i,0,0,++left,this.context))
                 }
                 else{
                     let x = j ,y=i;
-                    this.widthArray[x] = 100;
-                    this.heightArray[y] = 30;
+                    if(this.checkPoint == 70){
+                        this.widthArray[x] = 100;
+                        this.heightArray[y] = 30;
+                    }
                     this.grid.push(new rect(x,y,0,0,"",this.context))
                 }
                 j += this.width;
-                k++;
             }
         }
         // console.log(this.top,this.grid,this.left)
@@ -268,7 +252,9 @@ class GridFromLines{
         if(this.gridData[0] == " "){
             for(let i=0;i<this.gridData.length;i++){
                 let wt = this.textWrap(this.gridData[i]);
-                this.grid[i].draw(wt,this.widthArray[this.grid[i].x],this.heightArray[this.grid[i].y]);
+                if(this.gridData[i].length > 1){
+                    this.grid[i].draw(wt,this.widthArray[this.grid[i].x],this.heightArray[this.grid[i].y]);
+                }
             }
         }else{
             for(let i=0;i<this.gridData.length;i++){
@@ -287,7 +273,7 @@ class GridFromLines{
         }
     }
     drawLeft(scrolling=0){
-        let k = 0;
+        let k = this.st;
         for(let i=0;i<this.left.length;i++){
             // if(scrolling != 0 && parseInt(this.left[i].text) >= 1){
             //     this.left[i].text = String(parseInt(this.left[i].text) + 3*scrolling);    
@@ -339,6 +325,7 @@ class GridFromLines{
         //     x += this.widthArray[this.grid[x].x];
         // }
         console.log("selectedRow: ",selectedRow)
+        this.selectedCellForDelete = selectedRow[0];
         return selectedRow;
     }
     
@@ -586,7 +573,7 @@ class GridFromLines{
                 // this.initailX = this.found.x;
                 this.detector = 1;
             }
-            if((y >= this.found.y+this.heightArray[this.found.y]-10 && y <= this.found.y+this.heightArray[this.found.y]-2) || this.isIncreasing){
+            if((y >= this.found.y+this.heightArray[this.found.y]-5 && y <= this.found.y+this.heightArray[this.found.y]-2) || this.isIncreasing){
                 this.canvas.style.cursor = "row-resize";
                 if(this.isIncreasing == 1){
                     let factor = y-(this.s.y);
@@ -662,42 +649,6 @@ class GridFromLines{
         this.setData();
         this.drawGrid();
         this.drawCanvas();
-
-
-
-
-
-
-
-        // let totalHeight = 0;
-        // this.scrollY += event.deltaY;
-        // // if(this.scrollY > 780){
-        // //     this.scrollY = 0;
-        // // }
-        // console.log("scrollY: ",this.scrollY)
-        // for(let i=0;i<this.grid.length;i+=this.heightArray[i]){
-        //     totalHeight += this.heightArray[i];
-        //     console.log(totalHeight);
-        //     if(totalHeight >= this.scrollY){
-        //         console.log("insie: ",Math.floor(totalHeight/30));
-        //         this.startRow = Math.floor(totalHeight/30)-1
-        //         await this.fetchData();
-        //         this.setData();
-        //         this.drawGrid();
-        //         this.drawCanvas();
-        //         break;
-        //     }
-            
-        // }
-        // this.scrollY += 3*f;
-        // this.scrollY = Math.max(this.scrollY,0);
-        // console.log("sy: ",this.scrollY)
-        // // if(this.scrollY >= 10){
-        //     await this.fetchData();
-        // // }
-        // this.setData();
-        // this.drawGrid();
-        // this.drawCanvas(0,1*f);
     }
 
     textWrap(text){
@@ -717,10 +668,10 @@ class GridFromLines{
         input.type = "text";
         input.value = this.gridData[i];
         input.style.position = "absolute";
-        input.style.left = `${this.grid[i].x }px`;
-        input.style.top = `${this.grid[i].y}px`;
-        input.style.width = `${this.grid[i].width }px`;
-        input.style.height = `${this.grid[i].height }px`; 
+        input.style.left = `${this.grid[i].x}px`;
+        input.style.top = `${this.grid[i].y+160}px`;
+        input.style.width = `${this.widthArray[this.grid[i].x] }px`;
+        input.style.height = `${this.heightArray[this.grid[i].y] }px`; 
         input.style.fontSize = "12px"; 
         input.style.border = "1px solid #rgb(221,221,221)";
         input.style.boxSizing = "border-box";

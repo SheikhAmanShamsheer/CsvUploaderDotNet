@@ -14,7 +14,7 @@ class rect {
             // this.context.beginPath();
             // this.context.fillRect(this.x, this.y, this.width, this.height);
             // this.context.stroke();
-            this.context.font = "16px Arial";
+            this.context.font = "12px Arial";
             this.context.textAlign = "center";
             this.context.textBaseline = "middle";
             this.context.fillText(t, this.x + width / 2, this.y + height / 2);

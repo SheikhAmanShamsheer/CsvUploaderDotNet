@@ -9,21 +9,91 @@ const context = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight-5;
 
-// const leftCanvas = document.getElementById("left");
-// leftCanvas.width = 100;
-// leftCanvas.height = 5000;
-// const leftC = leftCanvas.getContext("2d");
 
-// const topCanvas = document.getElementById("top");
-// topCanvas.width = 2700;
-// topCanvas.height = 25;
-// const topC = topCanvas.getContext("2d");
+const findEmail = document.getElementById("emailInput");
+const submitEmail = document.getElementById("findRecord");
 
-// var grid = new Grid(0,0,c,canvas)
-// var top = new border(0,25,topC,topCanvas,c)
-// var left = new leftBorder(25,0,leftC,leftCanvas)
+const UploadFile = document.getElementById("UploadFile");
+const deleteButton = document.getElementById("deleteBtn");
 
 
+
+
+async function fetchByEmail(email){
+    let data = undefined;
+    const apiUrl = `http://localhost:5239/api/user/email/${email}`;
+    try{
+        const response = await fetch(apiUrl);
+        const apiData = await response.json();
+        data = Object.values(apiData);
+    }
+    catch(error)
+    {
+        console.log(error);
+    }
+    return data
+}
+
+async function fetchCount(){
+    const apiUrl = `http://localhost:5239/api/user/count`;
+    let data = undefined;
+    try{
+        const response = await fetch(apiUrl);
+        const apiData = await response.json();
+        data = apiData
+    }
+    catch(error)
+    {
+        console.log(error);
+    }
+    return data
+}
+
+
+
+async function uploadCsv(event) {
+    event.preventDefault();
+    let fileInput = document.getElementById("fileInput");
+    let file = fileInput.files[0];
+    if (!file) {
+        alert("Please select a file");
+        console.error("No file selected");
+        return;
+    }
+    console.log(file);
+    const formData = new FormData();
+    formData.append("files", file);
+
+    try {
+        const response = await fetch(
+            "http://localhost:5239/api/user/upload-file",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
+        const data = await response.json();
+        console.log("no of lines: ",data);
+        if(data.length > 0) fileInput.value = ""
+        let count = await fetchCount();
+        let totalLineUploaded = count-initialCount;
+        while(totalLineUploaded < data){
+            count = await fetchCount();
+            totalLineUploaded = count-initialCount;
+            console.log(`Lines to be uploaded: ${data} and lines Uploaded: ${totalLineUploaded}`)
+            if(totalLineUploaded == 85633){
+                let data = await fetchData();
+                gridLines.setData(data)
+                gridLines.drawGrid()
+                gridLines.drawCanvas()
+                break;
+            }   
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert(data);
+    }
+}
 
 async function fetchData(){
     const apiUrl = `http://localhost:5239/api/user`;
@@ -31,10 +101,7 @@ async function fetchData(){
     try{
         const response = await fetch(apiUrl);
         const apiData = await response.json();
-        // let apidata = data;
-        // apidata = data.map(data => Object.values(data));
-        // console.log("data",Object.values(apiData[0]));
-        
+
         for(let i=0;i<apiData.length;i++){
             data.push(Object.values(apiData[i]))
         }
@@ -46,7 +113,39 @@ async function fetchData(){
     return data
 }
 
+async function DeleteById(id){
+    const apiUrl = `http://localhost:5239/api/user/email/${id}`;
+    try{
+        const response = await fetch(apiUrl);
+        const apiData = await response.json();
+        // data = Object.values(apiData);
+        alert(apiData);
+    }
+    catch(error)
+    {
+        console.log(error);
+    }
+    return data
+}
+
+
+
+let initialCount = await fetchCount();
+
+
+
 let data = [];
+let userData = undefined;
+
+submitEmail.addEventListener("click",async ()=>{
+    userData = await fetchByEmail(findEmail.value);
+    console.log(userData);
+    data.push(userData)
+    gridLines.setData([userData])
+    gridLines.drawGrid()
+    gridLines.drawCanvas()
+    findEmail.value = ""
+})
 try{
     data = await fetchData();
 }catch{
@@ -54,9 +153,20 @@ try{
 }
 
 
+
+
 let gridLines = new GridFromLines(canvas,context,data)
 gridLines.drawCanvas();
 
+
+deleteButton.addEventListener("click",()=>{
+    if(gridLines.selectedCellForDelete){
+        console.log(gridLines.selectedCellForDelete)
+        // DeleteById(gridLines.selectedCellForDelete.id)
+    }
+})
+
+UploadFile.addEventListener('click',uploadCsv)
 
 canvas.addEventListener("pointerdown",(event)=>{
     gridLines.handleMouseDown(event);
@@ -71,13 +181,6 @@ canvas.addEventListener("dblclick",(event)=>{
     gridLines.handleDoubleClick(event);
 })
 canvas.addEventListener("wheel",(event)=>{
-    // var st = window.scrollY || document.documentElement.scrollTop; // Credits: "https://github.com/qeremy/so/blob/master/so.dom.js#L426"
-    // if (st > lastScrollTop) {
-        //     f = 1;
-        // } else if (st < lastScrollTop) {
-            //     f = -1
-            // } // else was horizontal scroll
-            // let lastScrollTop = st <= 0 ? 0 : st;
     let f = 1;
     if(event.deltaY < 0){
         f = -1
