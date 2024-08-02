@@ -31,6 +31,10 @@ class GridFromLines{
         this.checkPoint = 70;
         this.nextStartPoint = 101;
         this.selectedCellForDelete = undefined;
+        this.singleDataLength = 0;
+        if(this.data.length > 0){
+            this.singleDataLength = this.data[0].length;
+        }
 
         this.widthArray = new Map();
         this.heightArray = new Map();
@@ -296,6 +300,7 @@ class GridFromLines{
             this.left[i].draw(++k,this.widthArray[this.left[i].x],this.heightArray[this.left[i].y]);
         }
     }
+    
     find(x,y,arr){
         for(let i=0;i< arr.length;i++){
             let r = arr[i];
@@ -351,12 +356,14 @@ class GridFromLines{
         this.context.rect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.stroke();
     }
+
     drawGridCells(cell){
         this.context.fillStyle = "rgba(19,126,67,0.2)";
         this.context.beginPath();
         this.context.fillRect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.fillStyle = "black" // for converting the text color back to black 
     }
+
     drawSelectedCells(cells){
         for(let i=0;i<cells.length;i++){
             // *** for blue border ***
@@ -369,7 +376,6 @@ class GridFromLines{
             // this.context.fillStyle = "rgba(14,101,235,0.1)";
             // this.context.fillStyle = "rgba(14,101,235,0.1)";
             this.context.fillStyle = "rgba(19,126,67,0.2)";
-
             this.context.beginPath();
             this.context.fillRect(cells[i].x, cells[i].y, this.widthArray[cells[i].x], this.heightArray[cells[i].y]);
             this.context.fillStyle = "black" // for converting the text color back to black 
@@ -483,8 +489,8 @@ class GridFromLines{
         console.log("drawing line")
         this.context.strokeStyle = "grey";
         this.context.beginPath();
-        this.context.moveTo(startX,startY);
-        this.context.lineTo(endX,endY);
+        this.context.moveTo(startX+0.5,startY+0.5);
+        this.context.lineTo(endX+0.5,endY+0.5);
         this.context.stroke();
     }
     drawCellBorder(cell){
