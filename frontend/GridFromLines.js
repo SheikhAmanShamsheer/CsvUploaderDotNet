@@ -31,8 +31,8 @@ class GridFromLines{
         this.nextStartPoint = 101;
         this.selectedCellForDelete = undefined;
 
-        this.widthArray = [];
-        this.heightArray = [];
+        this.widthArray = new Map();
+        this.heightArray = new Map();
         
         this.s = new rect(-1,-1,this.width,this.height,"",this.context);
         this.detector = 0;
@@ -122,6 +122,7 @@ class GridFromLines{
                         let iX = this.grid[i].x;
                         this.grid[i].x += this.factor;
                         this.widthArray[this.grid[i].x] = this.widthArray[iX];
+                        // console.log("getting: ",this.widthArray.get(iX),iX)  Later .....................
                     }
                 }
             }
@@ -153,6 +154,7 @@ class GridFromLines{
     }
     drawGrid(){
         // this.context.clearRect(0,0,this.canvas.width,this.canvas.height)
+        this.setData()
         let letters = 0;
         let left = this.st;
         let k = 0;
@@ -188,12 +190,12 @@ class GridFromLines{
                         this.widthArray[x] = 100;
                         this.heightArray[y] = 30;
                     }
-                    this.grid.push(new rect(x,y,0,0,"",this.context))
+                    this.grid.push(new rect(x,y,0,0,this.gridData[k++],this.context))
                 }
                 j += this.width;
             }
         }
-        // console.log(this.top,this.grid,this.left)
+
     }
     drawTopSelected(){
         if(this.end.x == -1) this.end = this.start;

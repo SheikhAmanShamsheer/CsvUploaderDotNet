@@ -114,18 +114,17 @@ async function fetchData(){
 }
 
 async function DeleteById(id){
-    const apiUrl = `http://localhost:5239/api/user/email/${id}`;
+    const apiUrl = `http://localhost:5239/api/user/delete/${id}`;
     try{
         const response = await fetch(apiUrl);
         const apiData = await response.json();
-        // data = Object.values(apiData);
-        alert(apiData);
+        console.log(apiData)
+        alert(apiData.response);
     }
     catch(error)
     {
         console.log(error);
     }
-    return data
 }
 
 
@@ -159,10 +158,16 @@ let gridLines = new GridFromLines(canvas,context,data)
 gridLines.drawCanvas();
 
 
-deleteButton.addEventListener("click",()=>{
+deleteButton.addEventListener("click", async()=>{
     if(gridLines.selectedCellForDelete){
-        console.log(gridLines.selectedCellForDelete)
-        // DeleteById(gridLines.selectedCellForDelete.id)
+        await DeleteById(gridLines.selectedCellForDelete.text);
+        gridLines.selectedCellForDelete = undefined;
+        let data = await fetchData();
+        gridLines.setData(data)
+        gridLines.drawGrid()
+        gridLines.drawCanvas()
+    }else{
+        alert("Select data to be deleted");
     }
 })
 
