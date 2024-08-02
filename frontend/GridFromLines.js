@@ -8,7 +8,7 @@ class GridFromLines{
         this.x = 0;
         this.y = 0;
         this.width = 100;
-        this.height = 30;
+        this.height = 20;
         this.grid = []
         this.top = []
         this.left = []
@@ -184,15 +184,15 @@ class GridFromLines{
                     }
                     let x = j ,y=i;
                     if(this.checkPoint == 70){
-                        this.widthArray[x] = 100;
-                        this.heightArray[y] = 30;
+                        this.widthArray[x] = this.width;
+                        this.heightArray[y] = this.height;
                     }
                     
                     this.top.push(new rect(x,y,0,0,text,this.context))
                 }else if(j == 0){
                     if(this.checkPoint == 70){
-                        this.widthArray[j] = 100;
-                        this.heightArray[i] = 30;
+                        this.widthArray[j] = this.width;
+                        this.heightArray[i] = this.height;
                     }
 
                     this.left.push(new rect(j,i,0,0,++left,this.context))
@@ -200,8 +200,8 @@ class GridFromLines{
                 else{
                     let x = j ,y=i;
                     if(this.checkPoint == 70){
-                        this.widthArray[x] = 100;
-                        this.heightArray[y] = 30;
+                        this.widthArray[x] = this.width;
+                        this.heightArray[y] = this.height;
                     }
                     this.grid.push(new rect(x,y,0,0,this.gridData[k++],this.context))
                 }
@@ -306,9 +306,9 @@ class GridFromLines{
     }
 
     findCell(x,y){
-        if(x >= 100 && y > 30){
+        if(x >= this.width && y > this.height){
             return this.find(x,y,this.grid);
-        }else if(x > 100 && y < 30){
+        }else if(x > this.width && y < this.height){
             return this.find(x,y,this.top);
         }else{
             return this.find(x,y,this.left);
@@ -345,13 +345,14 @@ class GridFromLines{
     }
     
     drawCell(cell){
-        this.context.strokeStyle ="rgb(0,0,255)"
+        // this.context.strokeStyle ="rgb(0,0,255)"
+        this.context.strokeStyle ="rgb(19,126,67)"
         this.context.beginPath();
         this.context.rect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.stroke();
     }
     drawGridCells(cell){
-        this.context.fillStyle = "rgba(14,101,235,0.1)";
+        this.context.fillStyle = "rgba(19,126,67,0.2)";
         this.context.beginPath();
         this.context.fillRect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.fillStyle = "black" // for converting the text color back to black 
@@ -365,7 +366,10 @@ class GridFromLines{
             // this.context.stroke();
             // *** for blue border end ***
 
-            this.context.fillStyle = "rgba(14,101,235,0.1)";
+            // this.context.fillStyle = "rgba(14,101,235,0.1)";
+            // this.context.fillStyle = "rgba(14,101,235,0.1)";
+            this.context.fillStyle = "rgba(19,126,67,0.2)";
+
             this.context.beginPath();
             this.context.fillRect(cells[i].x, cells[i].y, this.widthArray[cells[i].x], this.heightArray[cells[i].y]);
             this.context.fillStyle = "black" // for converting the text color back to black 
@@ -388,19 +392,20 @@ class GridFromLines{
         if(this.start == this.end ){
             this.drawCell(this.start);
         }else{
-            let first = 0;
+            // let first = 0;
             let g = []
             for(let i=0;i<this.grid.length;i++){
                 if((this.grid[i].x >= this.start.x && this.grid[i].x <= (this.end.x)) && (this.grid[i].y >= this.start.y && (this.grid[i].y < this.end.y+this.height))||
                 (this.grid[i].y >= this.end.y && this.grid[i].y <= this.start.y  && this.grid[i].x >= this.start.x && this.grid[i].x <= this.end.x)||
                 (this.grid[i].x <= this.start.x && this.grid[i].x >= this.end.x && this.grid[i].y >= this.start.y && this.grid[i].y <= this.end.y)||
                 (this.grid[i].x <= this.start.x && this.grid[i].x >= this.end.x && this.grid[i].y <= this.start.y && this.grid[i].y >= this.end.y)){
-                    if(first == 0){
+                    if(this.grid[i] == this.start){
                         this.drawCell(this.start);
-                        first++;
+                        // first++;
+                    }else{
+                        this.drawGridCells(this.grid[i])
                     }
                     g.push(this.grid[i]);
-                    this.drawGridCells(this.grid[i])
                 }
             }
             console.log(g);
@@ -414,10 +419,10 @@ class GridFromLines{
             let numberOfColumns = 0;
             let numberOfRows = 0;
             if(this.start.x == this.end.x && this.start.y < this.end.y){
-                this.drawGridLines(this.start.x,this.start.y,this.start.x+100,this.start.y);
-                this.drawGridLines(this.start.x+100,this.start.y,this.end.x+100,this.end.y+30);
-                this.drawGridLines(this.end.x,this.end.y+30,this.end.x+100,this.end.y+30)
-                this.drawGridLines(this.end.x,this.end.y+30,this.start.x,this.start.y)
+                this.drawGridLines(this.start.x,this.start.y,this.start.x+this.width,this.start.y);
+                this.drawGridLines(this.start.x+this.width,this.start.y,this.end.x+this.width,this.end.y+this.height);
+                this.drawGridLines(this.end.x,this.end.y+this.height,this.end.x+this.width,this.end.y+this.height)
+                this.drawGridLines(this.end.x,this.end.y+this.height,this.start.x,this.start.y)
                 
             }else if(this.start.x < this.end.x && this.start.y < this.end.y){
                 topLeft = this.start;
@@ -468,7 +473,7 @@ class GridFromLines{
         
     }
     drawGridLines(startX,startY,endX,endY){
-        this.context.strokeStyle = "blue";
+        this.context.strokeStyle = "rgb(19,126,67)";
         this.context.beginPath();
         this.context.moveTo(startX,startY);
         this.context.lineTo(endX,endY);
@@ -484,8 +489,9 @@ class GridFromLines{
     }
     drawCellBorder(cell){
         this.drawCanvas()
-        this.context.fillStyle = "blue"
-        this.context.strokeStyle = "rgb(255,255,255)"
+        this.context.fillStyle = "rgb(19,126,67)"
+        // this.context.strokeStyle = "rgb(255,255,255)"
+        this.context.strokeStyle = "rgb(19,126,67)"
         this.context.beginPath();
         this.context.fillRect(cell.x, cell.y, this.widthArray[cell.x], this.heightArray[cell.y]);
         this.context.fillStyle = "white";
@@ -496,7 +502,7 @@ class GridFromLines{
         this.context.fillStyle = "black";
         this.context.stroke();
         let se = null;
-        if(cell.x >= 100 && cell.y < 30){
+        if(cell.x >= this.width && cell.y < this.height){
             se = this.selectEntireColumn(cell);
         }else{
             se = this.selectEntireRow(cell);
@@ -511,7 +517,7 @@ class GridFromLines{
         const y = event.offsetY;
         let a = this.findCell(x,y);
         let found = a[0];
-        if((x >= found.x+this.widthArray[found.x]-10 && x <= found.x+this.widthArray[found.x]-5 && y < 30)){
+        if((x >= found.x+this.widthArray[found.x]-10 && x <= found.x+this.widthArray[found.x]-2 && y < this.height)){
             this.isIncreasing = 1;
             this.initailX = found.x;
             console.log("top")
@@ -522,7 +528,7 @@ class GridFromLines{
         }else{
             this.canvas.style.cursor = "pointer";
             let i = a[1];
-            if(found.x >= 100 && found.y >= 30){
+            if(found.x >= this.width && found.y >= this.height){
                 this.isSelecting = 1;
                 // this.start.x = found.x;
                 // this.start.y = found.y;
@@ -547,7 +553,7 @@ class GridFromLines{
             let a = this.findCell(x,y);
             let found = a[0];
             let i = a[1];
-            if(found.x >= 100 && found.y >= 30){
+            if(found.x >= this.width && found.y >= this.height){
                 this.end = found;
             }
             this.drawSelectedGrid();
@@ -566,7 +572,7 @@ class GridFromLines{
                 // this.initailX = this.found.x;
                 this.detector = 1;
             }
-            if((x >= this.found.x+this.widthArray[this.found.x]-10 && x <= this.found.x+this.widthArray[this.found.x]-5  && y < 30) || this.isIncreasing){
+            if((x >= this.found.x+this.widthArray[this.found.x]-10 && x <= this.found.x+this.widthArray[this.found.x]-2  && y < this.height) || this.isIncreasing){
                 this.canvas.style.cursor = "col-resize";
                 if(this.isIncreasing == 1){
                     let factor = x-(this.s.x);
@@ -632,7 +638,7 @@ class GridFromLines{
         const rect = this.canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
-        if(x > 100 && y > 30){
+        if(x > this.width && y > this.height){
             let a = this.findCell(x,y);
             let found = a[0];
             let i = a[1];
@@ -711,7 +717,8 @@ class GridFromLines{
         input.style.width = `${this.widthArray[this.grid[i].x] }px`;
         input.style.height = `${this.heightArray[this.grid[i].y] }px`; 
         input.style.fontSize = "12px"; 
-        input.style.border = "1px solid #rgb(221,221,221)";
+        // input.style.border = "1px solid rgb(221,221,221)";
+        input.style.border = "1px solid #137E43";
         input.style.boxSizing = "border-box";
         document.body.appendChild(input);
         input.focus();
